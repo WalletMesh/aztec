@@ -72,7 +72,7 @@ export class AztecWalletRPC extends JSONRPCServer<AztecWalletRPCMethodMap> {
     const addr = AztecAddress.fromString(contractAddress);
     const interaction = new ContractFunctionInteraction(this.wallet, addr, functionAbi, args);
     const sentTx = interaction.send();
-    return (await sentTx.getTxHash()).to0xString();
+    return (await sentTx.getTxHash()).toString();
   }
 
   /**

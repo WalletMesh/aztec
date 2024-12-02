@@ -64,7 +64,7 @@ describe('AztecWalletRPC', () => {
 
   describe('aztec_sendTransaction', () => {
     it('should handle transaction sending', async () => {
-      const mockTxHash = { to0xString: () => '0x123' };
+      const mockTxHash = { toString: () => '0x123' };
       const mockSentTx = {
         getTxHash: vi.fn().mockResolvedValue(mockTxHash),
       } as unknown as SentTx;

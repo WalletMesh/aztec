@@ -1,6 +1,6 @@
 {
   "name": "@walletmesh/aztec",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "type": "module",
   "main": "dist/index.js",
@@ -37,8 +37,8 @@
     "vitest": "^2.1.6"
   },
   "dependencies": {
-    "@aztec/aztec.js": "0.62.0",
-    "@aztec/foundation": "0.62.0",
+    "@aztec/aztec.js": "0.65.2",
+    "@aztec/foundation": "0.65.2",
     "@walletmesh/jsonrpc": "^0.0.1"
   }
 }

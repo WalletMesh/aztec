@@ -75,11 +75,7 @@ describe('AztecWalletRPC', () => {
         name: 'test',
         parameters: [],
         returnTypes: [{ kind: 'boolean' }],
-        functionType: FunctionType.PRIVATE,
-        isInternal: false,
-        isStatic: false,
-        isInitializer: false,
-      };
+      } as unknown as FunctionAbi;
 
       const request: JSONRPCRequest<AztecWalletRPCMethodMap, 'aztec_sendTransaction'> = {
         jsonrpc: '2.0',
@@ -110,11 +106,7 @@ describe('AztecWalletRPC', () => {
         name: 'test',
         parameters: [],
         returnTypes: [],
-        functionType: FunctionType.PRIVATE,
-        isInternal: false,
-        isStatic: false,
-        isInitializer: false,
-      };
+      } as unknown as FunctionAbi;
 
       const request: JSONRPCRequest<AztecWalletRPCMethodMap, 'aztec_simulateTransaction'> = {
         jsonrpc: '2.0',

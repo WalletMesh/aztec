@@ -1,3 +1,7 @@
+**@walletmesh/aztec-rpc v0.0.3**
+
+***
+
 ## WalletMesh Aztec RPC Library
 
 [@walletmesh/aztec-rpc](https://github.com/WalletMesh/aztec/tree/main/packages/rpc) provides an implementation of

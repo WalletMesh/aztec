@@ -1,7 +1,7 @@
 {
   "name": "WalletMesh Aztec",
   "image": "mcr.microsoft.com/devcontainers/base:bookworm",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/wm-aztec,type=bind,consistency=cached",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/wm-aztec,type=bind",
   "workspaceFolder": "/home/vscode/wm-aztec",
   "mounts": [
     {
@@ -19,8 +19,7 @@
     "npm_config_store_dir": "/home/vscode/.pnpm-store"
   },
   "onCreateCommand": {
-    "mount_permissions": "mount | egrep 'pnpm-store|node_modules' | awk '{print $3}' | sudo xargs chown `id -u`:`id -g`",
-    "pnpm_install": "sleep 2 && pnpm install"
+    "setup": "mount | egrep 'pnpm-store|node_modules' | awk '{print $3}' | sudo xargs chown `id -u`:`id -g` ; pnpm install"
   },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {

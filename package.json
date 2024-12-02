@@ -1,44 +1,40 @@
 {
-  "name": "@walletmesh/aztec",
+  "name": "wm-aztec",
   "version": "0.0.3",
   "description": "",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/WalletMesh/aztec.git"
+  "publicConfig": {
+    "publish": false
   },
   "scripts": {
-    "build": "tsc --build tsconfig.build.json",
-    "clean": "rimraf dist",
-    "type-check": "tsc --noEmit",
-    "test": "vitest run",
-    "coverage": "vitest run --coverage",
+    "build": "pnpm run -r build",
+    "clean": "pnpm run -r clean",
+    "test": "pnpm run -r test",
+    "coverage": "pnpm run -r coverage",
     "lint": "biome lint",
     "lint:fix": "biome lint --fix",
     "format": "biome format",
-    "format:fix": "biome format --fix",
-    "doc": "typedoc"
+    "format:fix": "biome format --fix"
   },
   "keywords": [],
   "author": "",
+  "packageManager": "pnpm@9.14.4",
   "license": "Apache-2.0",
+  "pnpm": {
+    "overrides": {
+      "@aztec/aztec.js": "0.65.2",
+      "@aztec/accounts": "0.65.2",
+      "@aztec/foundation": "0.65.2",
+      "@aztec/noir-contracts.js": "0.65.2",
+      "@aztec/circuits.js": "0.65.2"
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.10.1",
-    "@vitest/coverage-v8": "^2.1.6",
+    "@vitest/coverage-v8": "^2.1.8",
     "rimraf": "^6.0.1",
-    "typedoc": "^0.27.2",
     "typescript": "^5.7.2",
-    "vitest": "^2.1.6"
-  },
-  "dependencies": {
-    "@aztec/aztec.js": "0.65.2",
-    "@aztec/foundation": "0.65.2",
-    "@walletmesh/jsonrpc": "^0.0.1"
+    "vitest": "^2.1.8"
   }
 }

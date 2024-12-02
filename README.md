@@ -1,6 +1,7 @@
 ## WalletMesh Aztec RPC Library
 
-This package provides an implementation of a Wallet Provider and Service for [Aztec](https://aztec.network).
+[@walletmesh/aztec](https://github.com/WalletMesh/aztec) provides an implementation of
+RPC Provider & Wallet Service for [Aztec](https://aztec.network).
 
 It is built on top of the
 [@walletmesh/jsonrpc](https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme)

@@ -53,11 +53,7 @@ describe('AztecProviderRPC', () => {
         name: 'test',
         parameters: [],
         returnTypes: [{ kind: 'boolean' }],
-        functionType: FunctionType.PRIVATE,
-        isInternal: false,
-        isStatic: false,
-        isInitializer: false,
-      };
+      } as unknown as FunctionAbi;
 
       const result = await provider.sendTransaction(AztecAddress.random().toString(), mockFunctionAbi, []);
 

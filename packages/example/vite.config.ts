@@ -1,8 +1,8 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { nodePolyfills } from 'vite-plugin-node-polyfills'
-import { viteStaticCopy } from 'vite-plugin-static-copy'
-import topLevelAwait from 'vite-plugin-top-level-await'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
+import topLevelAwait from 'vite-plugin-top-level-await';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -39,8 +39,8 @@ export default defineConfig({
       output: {
         paths: {
           '@aztec/bb.js': './aztec-bbjs@0.65.2.js',
-        }
-      }
-    }
-  }
-})
+        },
+      },
+    },
+  },
+});

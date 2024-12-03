@@ -1,0 +1,39 @@
+{
+  "name": "@walletmesh/aztec-rpc",
+  "version": "0.0.3",
+  "description": "",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletMesh/aztec.git"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "rimraf dist",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --fix",
+    "format": "biome format",
+    "format:fix": "biome format --fix",
+    "doc": "typedoc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "typedoc": "^0.27.2",
+    "typedoc-plugin-markdown": "^4.3.1"
+  },
+  "dependencies": {
+    "@aztec/aztec.js": "0.65.2",
+    "@aztec/foundation": "0.65.2",
+    "@walletmesh/jsonrpc": "^0.0.1"
+  }
+}

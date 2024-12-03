@@ -1,0 +1,31 @@
+{
+  "name": "@walletmesh/aztec",
+  "version": "0.0.4",
+  "description": "WalletMesh Aztec package",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "./rpc": {
+      "import": "./dist/rpc.js",
+      "require": "./dist/rpc.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "rimraf dist",
+    "lint": "biome lint",
+    "lint:fix": "biome lint --fix",
+    "format": "biome format",
+    "format:fix": "biome format --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@walletmesh/aztec-rpc": "workspace:^"
+  }
+}

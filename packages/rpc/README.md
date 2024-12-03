@@ -16,7 +16,8 @@ It is built on top of the
 
 ## Example
 
-See [example](../example#readme) for an example of how to use this library.
+See [example](https://github.com/WalletMesh/aztec/tree/main/packages/example)
+for an example of how to use this library.
 
 ## Installation
 

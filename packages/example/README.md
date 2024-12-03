@@ -1,4 +1,4 @@
-## Examples for WalletMesh Aztec Provider & Wallet RPC
+## Example for WalletMesh Aztec Provider & Wallet RPC
 
 This repository contains an example DApp and Wallet that demonstrate how to use
 [@walletmesh/aztec](https://github.com/WalletMesh/aztec#readme) library for

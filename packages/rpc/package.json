@@ -12,6 +12,7 @@
     "type": "git",
     "url": "git+https://github.com/WalletMesh/aztec.git"
   },
+  "homepage": "https://github.com/WalletMesh/aztec/tree/main/packages/rpc#readme",
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "clean": "rimraf dist",
@@ -22,7 +23,9 @@
     "lint:fix": "biome lint --fix",
     "format": "biome format",
     "format:fix": "biome format --fix",
-    "doc": "typedoc"
+    "doc": "typedoc",
+    "version": "pnpm build",
+    "postversion": "pnpm doc"
   },
   "keywords": [],
   "author": "",

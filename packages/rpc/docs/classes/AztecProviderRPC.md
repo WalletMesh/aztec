@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.3**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.4**](../README.md)
 
 ***
 
@@ -30,7 +30,7 @@ A function to send JSON-RPC requests.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:17](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L17)
+[packages/rpc/src/provider.ts:17](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L17)
 
 ## Methods
 
@@ -48,7 +48,7 @@ A boolean indicating the connection status.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:25](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L25)
+[packages/rpc/src/provider.ts:25](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L25)
 
 ***
 
@@ -66,7 +66,7 @@ The account address as a string.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:33](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L33)
+[packages/rpc/src/provider.ts:33](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L33)
 
 ***
 
@@ -90,7 +90,7 @@ The JSON-RPC response to process.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:75](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L75)
+[packages/rpc/src/provider.ts:75](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L75)
 
 ***
 
@@ -116,7 +116,7 @@ A boolean indicating the registration status.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:86](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L86)
+[packages/rpc/src/provider.ts:86](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L86)
 
 ***
 
@@ -148,7 +148,7 @@ A boolean indicating the registration status.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:96](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L96)
+[packages/rpc/src/provider.ts:96](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L96)
 
 ***
 
@@ -186,7 +186,7 @@ The transaction hash as a string.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:44](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L44)
+[packages/rpc/src/provider.ts:44](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L44)
 
 ***
 
@@ -224,4 +224,4 @@ The result of the transaction simulation.
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:59](https://github.com/WalletMesh/aztec/blob/9ffb568c7c00c5db0719c32c2261d4f8d51237ea/packages/rpc/src/provider.ts#L59)
+[packages/rpc/src/provider.ts:59](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/provider.ts#L59)

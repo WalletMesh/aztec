@@ -1,40 +1,19 @@
-**@walletmesh/aztec-rpc v0.0.4**
+## WalletMesh Aztec Library
 
-***
-
-## WalletMesh Aztec RPC Library
-
-[@walletmesh/aztec-rpc](https://github.com/WalletMesh/aztec/tree/main/packages/rpc) provides an implementation of
-RPC Provider & Wallet Service for [Aztec](https://aztec.network).
-
-It is built on top of the
-[@walletmesh/jsonrpc](https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme) library.
-
-## Features
-
-- Connect to Aztec wallet
-- Get account addresses
-- Send and simulate transactions
-- Register contacts and contracts
-- Type-safe RPC interfaces (see `src/types.ts`)
-
-## Example
-
-See [example](https://github.com/WalletMesh/aztec/tree/main/packages/example)
-for an example of how to use this library.
+[@walletmesh/aztec](https://github.com/WalletMesh/aztec/tree/main) provides tools for interacting
+with the [Aztec](https://aztec.network) blockchain.
 
 ## Installation
 
 ```bash
-npm install @walletmesh/aztec-rpc
+npm install @walletmesh/aztec
 ```
 
 ## Usage
-
 ### On the dApp (client) side
 
 ```js
-import { AztecProviderRPC } from '@walletmesh/aztec-rpc';
+import { AztecProviderRPC } from '@walletmesh/aztec/rpc';
 import type { FunctionAbi } from '@aztec/foundation/abi';
 
 // Create provider that sends requests via postMessage
@@ -73,11 +52,15 @@ async function interact() {
 ```
 
 ### On the wallet (server) side
+
 ```js
-import { AztecWalletRPC } from '@walletmesh/aztec-rpc';
+import { AztecWalletRPC } from '@walletmesh/aztec/rpc';
 import type { Wallet } from '@aztec/aztec.js';
 
-// Initialize with your Aztec wallet instance
+// Setup your Aztec wallet instance
+const wallet: Wallet = setupWallet()/
+
+// Initialize WalletRPC with your Aztec wallet instance and a response handler
 const walletRPC = new AztecWalletRPC(
     wallet,
     response => {

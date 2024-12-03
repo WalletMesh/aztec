@@ -1,8 +1,8 @@
-[**@walletmesh/aztec-rpc v0.0.3**](README.md)
+[**@walletmesh/aztec-rpc v0.0.4**](README.md)
 
 ***
 
-# @walletmesh/aztec-rpc v0.0.3
+# @walletmesh/aztec-rpc v0.0.4
 
 ## Classes
 

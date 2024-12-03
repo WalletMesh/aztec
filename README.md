@@ -58,7 +58,7 @@ import { AztecWalletRPC } from '@walletmesh/aztec/rpc';
 import type { Wallet } from '@aztec/aztec.js';
 
 // Setup your Aztec wallet instance
-const wallet: Wallet = setupWallet()/
+const wallet: Wallet = setupWallet();
 
 // Initialize WalletRPC with your Aztec wallet instance and a response handler
 const walletRPC = new AztecWalletRPC(

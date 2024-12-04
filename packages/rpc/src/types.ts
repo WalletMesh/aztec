@@ -1,5 +1,16 @@
 import type { ContractArtifact, FunctionAbi } from '@aztec/foundation/abi';
 
+export type TransactionParams = {
+  /** The address of the contract to interact with. */
+  contractAddress: string;
+  /** The ABI of the function to call. */
+  functionAbi: FunctionAbi;
+  /** The arguments to pass to the function. */
+  args: unknown[];
+  /** Optional authorization witness as a string. */
+  authwit?: string;
+};
+
 /**
  * A mapping of JSON-RPC methods to their parameters and return types for Aztec Wallets.
  */
@@ -15,14 +26,12 @@ export type AztecWalletRPCMethodMap = {
   aztec_getAccount: { params: null; result: string };
 
   /**
-   * Sends a transaction to the Aztec network.
+   * Sends one or more transactions to the Aztec network.
+   * @param params - A single transaction or an array of transactions.
+   * @returns The transaction hash as a string.
    */
   aztec_sendTransaction: {
-    params: {
-      contractAddress: string;
-      functionAbi: FunctionAbi;
-      args: unknown[];
-    };
+    params: TransactionParams | TransactionParams[];
     result: string; // Return the transaction hash
   };
 
@@ -30,11 +39,7 @@ export type AztecWalletRPCMethodMap = {
    * Simulates a transaction on the Aztec network.
    */
   aztec_simulateTransaction: {
-    params: {
-      contractAddress: string;
-      functionAbi: FunctionAbi;
-      args: unknown[];
-    };
+    params: TransactionParams;
     result: unknown; // Returns the result of the transaction
   };
 

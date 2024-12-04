@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.5**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.6**](../README.md)
 
 ***
 
@@ -36,4 +36,4 @@ The ABI of the function to call.
 
 ## Defined in
 
-[packages/rpc/src/types.ts:3](https://github.com/WalletMesh/aztec/blob/9ad34955244cc5304cb566146299029ce93f71a9/packages/rpc/src/types.ts#L3)
+[packages/rpc/src/types.ts:3](https://github.com/WalletMesh/aztec/blob/60fbe0c0b3a152c15fef7d36614ba6484b090050/packages/rpc/src/types.ts#L3)

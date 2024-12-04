@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.5**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.6**](../README.md)
 
 ***
 
@@ -10,4 +10,4 @@
 
 ## Defined in
 
-[packages/rpc/src/wallet.ts:18](https://github.com/WalletMesh/aztec/blob/9ad34955244cc5304cb566146299029ce93f71a9/packages/rpc/src/wallet.ts#L18)
+[packages/rpc/src/wallet.ts:18](https://github.com/WalletMesh/aztec/blob/60fbe0c0b3a152c15fef7d36614ba6484b090050/packages/rpc/src/wallet.ts#L18)

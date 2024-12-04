@@ -1,8 +1,8 @@
-[**@walletmesh/aztec-rpc v0.0.4**](README.md)
+[**@walletmesh/aztec-rpc v0.0.5**](README.md)
 
 ***
 
-# @walletmesh/aztec-rpc v0.0.4
+# @walletmesh/aztec-rpc v0.0.5
 
 ## Classes
 
@@ -13,3 +13,4 @@
 
 - [AztecWalletRPCMethodMap](type-aliases/AztecWalletRPCMethodMap.md)
 - [AztecWalletRPCMiddleware](type-aliases/AztecWalletRPCMiddleware.md)
+- [TransactionParams](type-aliases/TransactionParams.md)

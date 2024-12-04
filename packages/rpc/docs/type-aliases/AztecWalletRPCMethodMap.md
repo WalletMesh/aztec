@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.4**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.5**](../README.md)
 
 ***
 
@@ -84,23 +84,19 @@ Registers a contract in the user's PXE.
 
 > **aztec\_sendTransaction**: `object`
 
-Sends a transaction to the Aztec network.
+Sends one or more transactions to the Aztec network.
+
+#### Param
+
+A single transaction or an array of transactions.
+
+#### Returns
+
+The transaction hash as a string.
 
 #### aztec\_sendTransaction.params
 
-> **params**: `object`
-
-#### aztec\_sendTransaction.params.args
-
-> **args**: `unknown`[]
-
-#### aztec\_sendTransaction.params.contractAddress
-
-> **contractAddress**: `string`
-
-#### aztec\_sendTransaction.params.functionAbi
-
-> **functionAbi**: `FunctionAbi`
+> **params**: [`TransactionParams`](TransactionParams.md) \| [`TransactionParams`](TransactionParams.md)[]
 
 #### aztec\_sendTransaction.result
 
@@ -114,19 +110,7 @@ Simulates a transaction on the Aztec network.
 
 #### aztec\_simulateTransaction.params
 
-> **params**: `object`
-
-#### aztec\_simulateTransaction.params.args
-
-> **args**: `unknown`[]
-
-#### aztec\_simulateTransaction.params.contractAddress
-
-> **contractAddress**: `string`
-
-#### aztec\_simulateTransaction.params.functionAbi
-
-> **functionAbi**: `FunctionAbi`
+> **params**: [`TransactionParams`](TransactionParams.md)
 
 #### aztec\_simulateTransaction.result
 
@@ -134,4 +118,4 @@ Simulates a transaction on the Aztec network.
 
 ## Defined in
 
-[packages/rpc/src/types.ts:6](https://github.com/WalletMesh/aztec/blob/f83c43fd0c0a959d8d62f3af87d0dfbdb5d7fecc/packages/rpc/src/types.ts#L6)
+[packages/rpc/src/types.ts:17](https://github.com/WalletMesh/aztec/blob/9ad34955244cc5304cb566146299029ce93f71a9/packages/rpc/src/types.ts#L17)

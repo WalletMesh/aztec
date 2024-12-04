@@ -25,7 +25,7 @@
     "format:fix": "biome format --fix",
     "doc": "typedoc",
     "version": "pnpm build",
-    "postversion": "pnpm doc"
+    "postversion": "pnpm doc && git add . && git commit -m 'chore: update docs' && git push"
   },
   "keywords": [],
   "author": "",

@@ -2,7 +2,7 @@ import type { ContractArtifact, FunctionAbi } from '@aztec/foundation/abi';
 
 import { JSONRPCClient } from '@walletmesh/jsonrpc';
 import type { JSONRPCResponse } from '@walletmesh/jsonrpc';
-import type { AztecWalletRPCMethodMap } from './types.js';
+import type { AztecWalletRPCMethodMap, TransactionParams } from './types.js';
 
 /**
  * Provides an interface to interact with the Aztec Wallet over JSON-RPC.
@@ -35,18 +35,12 @@ export class AztecProviderRPC {
   }
 
   /**
-   * Sends a transaction to the Aztec network.
-   * @param contractAddress - The contract address.
-   * @param functionAbi - The function ABI.
-   * @param args - The arguments for the function.
+   * Sends one or more transactions to the Aztec network.
+   * @param params - A single transaction or an array of transactions.
    * @returns The transaction hash as a string.
    */
-  async sendTransaction(contractAddress: string, functionAbi: FunctionAbi, args: unknown[]): Promise<string> {
-    return this.client.callMethod('aztec_sendTransaction', {
-      contractAddress,
-      functionAbi,
-      args,
-    });
+  async sendTransaction(params: TransactionParams | TransactionParams[]): Promise<string> {
+    return this.client.callMethod('aztec_sendTransaction', params);
   }
 
   /**
@@ -56,16 +50,8 @@ export class AztecProviderRPC {
    * @param args - The arguments for the function.
    * @returns The result of the transaction simulation.
    */
-  async simulateTransaction(
-    contractAddress: string,
-    functionAbi: FunctionAbi,
-    args: unknown[],
-  ): Promise<unknown> {
-    return this.client.callMethod('aztec_simulateTransaction', {
-      contractAddress,
-      functionAbi,
-      args,
-    });
+  async simulateTransaction(params: TransactionParams): Promise<unknown> {
+    return this.client.callMethod('aztec_simulateTransaction', params);
   }
 
   /**

@@ -1,11 +1,19 @@
-import { AztecAddress, Contract, ContractFunctionInteraction } from '@aztec/aztec.js';
+import {
+  AuthWitness,
+  AztecAddress,
+  Contract,
+  ContractFunctionInteraction,
+  NoFeePaymentMethod,
+} from '@aztec/aztec.js';
+import { GasSettings } from '@aztec/circuits.js';
 import type { Wallet } from '@aztec/aztec.js';
+import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
 import type { ContractArtifact, FunctionAbi } from '@aztec/foundation/abi';
 
 import { JSONRPCServer } from '@walletmesh/jsonrpc';
-import type { JSONRPCMiddleware, JSONRPCRequest } from '@walletmesh/jsonrpc';
+import type { JSONRPCMiddleware } from '@walletmesh/jsonrpc';
 
-import type { AztecWalletRPCMethodMap } from './types.js';
+import type { AztecWalletRPCMethodMap, TransactionParams } from './types.js';
 
 export type AztecWalletRPCMiddleware = JSONRPCMiddleware<AztecWalletRPCMethodMap>;
 
@@ -57,22 +65,37 @@ export class AztecWalletRPC extends JSONRPCServer<AztecWalletRPCMethodMap> {
 
   /**
    * Handles the 'aztec_sendTransaction' JSON-RPC method.
-   * @param params - The parameters for the transaction.
-   * @param params.contractAddress - The address of the contract to interact with.
-   * @param params.functionAbi - The ABI of the function to call.
-   * @param params.args - The arguments to pass to the function.
+   * Sends one or more transactions to the Aztec network, optionally including authorization witnesses.
+   * @param params - A single transaction or an array of transactions to send.
    * @returns The transaction hash as a string.
    */
-  private async sendTransaction(params: {
-    contractAddress: string;
-    functionAbi: FunctionAbi;
-    args: unknown[];
-  }): Promise<string> {
-    const { contractAddress, functionAbi, args } = params;
-    const addr = AztecAddress.fromString(contractAddress);
-    const interaction = new ContractFunctionInteraction(this.wallet, addr, functionAbi, args);
-    const sentTx = interaction.send();
-    return (await sentTx.getTxHash()).toString();
+  private async sendTransaction(params: TransactionParams | TransactionParams[]): Promise<string> {
+    const executionRequestInit: ExecutionRequestInit = {
+      calls: [],
+      // TODO: Figure out how to set the fee options
+      fee: {
+        paymentMethod: new NoFeePaymentMethod(),
+        gasSettings: GasSettings.empty(),
+      },
+    };
+
+    executionRequestInit.authWitnesses = [];
+
+    for (const tx of Array.isArray(params) ? params : [params]) {
+      const { contractAddress, functionAbi, args, authwit } = tx;
+      const addr = AztecAddress.fromString(contractAddress);
+      const interaction = new ContractFunctionInteraction(this.wallet, addr, functionAbi, args);
+      executionRequestInit.calls.push(interaction.request());
+      if (authwit) {
+        executionRequestInit.authWitnesses.push(AuthWitness.fromString(authwit));
+      }
+    }
+
+    const txExecutionRequest = await this.wallet.createTxExecutionRequest(executionRequestInit);
+    const simulatedTx = await this.wallet.simulateTx(txExecutionRequest, true /* simulatePublic */);
+    const txProvingResult = await this.wallet.proveTx(txExecutionRequest, simulatedTx.privateExecutionResult);
+    const txHash = await this.wallet.sendTx(txProvingResult.toTx());
+    return txHash.toString();
   }
 
   /**

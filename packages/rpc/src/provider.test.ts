@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
-import { AztecProviderRPC, type AztecWalletRPCMethodMap } from './index.js';
+import { AztecProviderRPC, type AztecWalletRPCMethodMap, type TransactionParams } from './index.js';
 import type { JSONRPCResponse, JSONRPCRequest } from '@walletmesh/jsonrpc';
 import { FunctionType } from '@aztec/foundation/abi';
 import type { FunctionAbi, ContractArtifact } from '@aztec/foundation/abi';
@@ -48,17 +48,51 @@ describe('AztecProviderRPC', () => {
   });
 
   describe('sendTransaction', () => {
-    it('should send transaction request', async () => {
+    it('should send a single transaction request', async () => {
       const mockFunctionAbi: FunctionAbi = {
         name: 'test',
         parameters: [],
         returnTypes: [{ kind: 'boolean' }],
       } as unknown as FunctionAbi;
 
-      const result = await provider.sendTransaction(AztecAddress.random().toString(), mockFunctionAbi, []);
+      const transaction: TransactionParams = {
+        contractAddress: AztecAddress.random().toString(),
+        functionAbi: mockFunctionAbi,
+        args: [],
+      };
+
+      const result = await provider.sendTransaction(transaction);
 
       expect(result).toBe('0x123');
       expect(lastRequest.method).toBe('aztec_sendTransaction');
+      expect(lastRequest.params).toEqual(transaction);
+    });
+
+    it('should send multiple transactions in a single request', async () => {
+      const mockFunctionAbi: FunctionAbi = {
+        name: 'test',
+        parameters: [],
+        returnTypes: [{ kind: 'boolean' }],
+      } as unknown as FunctionAbi;
+
+      const transactions: TransactionParams[] = [
+        {
+          contractAddress: AztecAddress.random().toString(),
+          functionAbi: mockFunctionAbi,
+          args: [],
+        },
+        {
+          contractAddress: AztecAddress.random().toString(),
+          functionAbi: mockFunctionAbi,
+          args: [],
+        },
+      ];
+
+      const result = await provider.sendTransaction(transactions);
+
+      expect(result).toBe('0x123');
+      expect(lastRequest.method).toBe('aztec_sendTransaction');
+      expect(lastRequest.params).toEqual(transactions);
     });
   });
 
@@ -70,11 +104,11 @@ describe('AztecProviderRPC', () => {
         returnTypes: [{ kind: 'boolean' }],
       } as unknown as FunctionAbi;
 
-      const result = await provider.simulateTransaction(
-        AztecAddress.random().toString(),
-        mockFunctionAbi,
-        [],
-      );
+      const result = await provider.simulateTransaction({
+        contractAddress: AztecAddress.random().toString(),
+        functionAbi: mockFunctionAbi,
+        args: [],
+      });
 
       expect(result).toEqual({ success: true });
       expect(lastRequest.method).toBe('aztec_simulateTransaction');

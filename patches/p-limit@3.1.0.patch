@@ -1,0 +1,11 @@
+diff --git a/index.js b/index.js
+index c2ae52d90db4776496b2cae20e636aea0d2dfceb..755e59adf0958d81d97ec75b4c9cf30390a7c59a 100644
+--- a/index.js
++++ b/index.js
+@@ -1,5 +1,5 @@
+ 'use strict';
+-const Queue = require('yocto-queue');
++const Queue = import('yocto-queue');
+ 
+ const pLimit = concurrency => {
+ 	if (!((Number.isInteger(concurrency) || concurrency === Infinity) && concurrency > 0)) {

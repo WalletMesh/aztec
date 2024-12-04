@@ -27,6 +27,9 @@
       "@aztec/foundation": "0.65.2",
       "@aztec/noir-contracts.js": "0.65.2",
       "@aztec/circuits.js": "0.65.2"
+    },
+    "patchedDependencies": {
+      "p-limit@3.1.0": "patches/p-limit@3.1.0.patch"
     }
   },
   "devDependencies": {

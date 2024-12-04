@@ -72,10 +72,10 @@ export class AztecWalletRPC extends JSONRPCServer<AztecWalletRPCMethodMap> {
   private async sendTransaction(params: TransactionParams | TransactionParams[]): Promise<string> {
     const executionRequestInit: ExecutionRequestInit = {
       calls: [],
-      // TODO: Figure out how to set the fee options
+      // TODO: Figure out appropriate fee options
       fee: {
         paymentMethod: new NoFeePaymentMethod(),
-        gasSettings: GasSettings.empty(),
+        gasSettings: GasSettings.default({ maxFeesPerGas: await this.wallet.getCurrentBaseFees() }),
       },
     };
 

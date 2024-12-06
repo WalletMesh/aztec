@@ -1,85 +1,107 @@
-import type { ContractArtifact, FunctionAbi } from '@aztec/foundation/abi';
+import type { ContractArtifact } from '@aztec/aztec.js';
+import type { ContractInstance } from '@aztec/circuits.js';
 
 import { JSONRPCClient } from '@walletmesh/jsonrpc';
-import type { JSONRPCResponse } from '@walletmesh/jsonrpc';
-import type { AztecWalletRPCMethodMap, TransactionParams } from './types.js';
+import type { JSONRPCRequest } from '@walletmesh/jsonrpc';
+
+import type { AztecWalletRPCMethodMap, TransactionFunctionCall, TransactionParams } from './types.js';
+import { registerContractClassSerializer, registerContractSerializer } from './utils.js';
 
 /**
- * Provides an interface to interact with the Aztec Wallet over JSON-RPC.
+ * Client-side provider for interacting with an Aztec Wallet through JSON-RPC.
+ * @public
  */
-export class AztecProviderRPC {
-  private client: JSONRPCClient<AztecWalletRPCMethodMap>;
+export class AztecProviderRPC extends JSONRPCClient<AztecWalletRPCMethodMap> {
+  /**
+   * Creates a new AztecProviderRPC instance
+   * @param sendRequest - Function to send JSON-RPC requests
+   */
+  constructor(
+    sendRequest: (
+      request: JSONRPCRequest<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>,
+    ) => Promise<unknown>,
+  ) {
+    super(sendRequest);
+    this.registerSerializers();
+  }
 
   /**
-   * Creates a new AztecProviderRPC instance.
-   * @param sendRequest - A function to send JSON-RPC requests.
+   * Registers custom serializers for complex data types
+   * @internal
    */
-  constructor(sendRequest: (request: unknown) => void) {
-    this.client = new JSONRPCClient<AztecWalletRPCMethodMap>(sendRequest);
+  private registerSerializers() {
+    this.registerSerializer('aztec_registerContract', { params: registerContractSerializer });
+    this.registerSerializer('aztec_registerContractClass', { params: registerContractClassSerializer });
   }
 
   /**
    * Connects to the Aztec network.
-   * @returns A boolean indicating the connection status.
+   * @returns True if connection successful
    */
   async connect(): Promise<boolean> {
-    return this.client.callMethod('aztec_connect');
+    return this.callMethod('aztec_connect');
   }
 
   /**
    * Retrieves the account address from the wallet.
-   * @returns The account address as a string.
+   * @returns The account address as a string
    */
   async getAccount(): Promise<string> {
-    return this.client.callMethod('aztec_getAccount');
+    return this.callMethod('aztec_getAccount');
   }
 
   /**
    * Sends one or more transactions to the Aztec network.
-   * @param params - A single transaction or an array of transactions.
-   * @returns The transaction hash as a string.
+   * @param params - The transactions to send and optional authorization witnesses
+   * @returns The transaction hash as a string
    */
-  async sendTransaction(params: TransactionParams | TransactionParams[]): Promise<string> {
-    return this.client.callMethod('aztec_sendTransaction', params);
+  async sendTransaction(params: TransactionParams): Promise<string> {
+    return this.callMethod('aztec_sendTransaction', params);
   }
 
   /**
    * Simulates a transaction on the Aztec network.
-   * @param contractAddress - The contract address.
-   * @param functionAbi - The function ABI.
-   * @param args - The arguments for the function.
-   * @returns The result of the transaction simulation.
+   * @param params - The transaction function call to simulate
+   * @returns The result of the transaction simulation
    */
-  async simulateTransaction(params: TransactionParams): Promise<unknown> {
-    return this.client.callMethod('aztec_simulateTransaction', params);
-  }
-
-  /**
-   * Receives a JSON-RPC response and processes it.
-   * @param response - The JSON-RPC response to process.
-   */
-  public receiveResponse(
-    response: JSONRPCResponse<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>,
-  ): void {
-    this.client.receiveResponse(response);
+  async simulateTransaction(params: TransactionFunctionCall): Promise<unknown> {
+    return this.callMethod('aztec_simulateTransaction', params);
   }
 
   /**
    * Registers a contact in the user's PXE.
-   * @param contact - The contact to register.
-   * @returns A boolean indicating the registration status.
+   * @param contact - The contact to register
+   * @returns True if registration successful
    */
   async registerContact(contact: string): Promise<boolean> {
-    return this.client.callMethod('aztec_registerContact', { contact });
+    return this.callMethod('aztec_registerContact', { contact });
   }
 
   /**
    * Registers a contract in the user's PXE.
-   * @param contractArtifact - The contract artifact.
-   * @param contractAddress - The contract address.
-   * @returns A boolean indicating the registration status.
+   * @param contractAddress - The contract address
+   * @param contractInstance - The contract instance
+   * @param contractArtifact - Optional contract artifact
+   * @returns True if registration successful
    */
-  async registerContract(contractArtifact: ContractArtifact, contractAddress: string): Promise<boolean> {
-    return this.client.callMethod('aztec_registerContract', { contractArtifact, contractAddress });
+  async registerContract(
+    contractAddress: string,
+    contractInstance: ContractInstance,
+    contractArtifact?: ContractArtifact,
+  ): Promise<boolean> {
+    return this.callMethod('aztec_registerContract', {
+      contractAddress,
+      contractInstance,
+      contractArtifact,
+    });
+  }
+
+  /**
+   * Registers a contract class in the user's PXE.
+   * @param contractArtifact - The contract artifact
+   * @returns True if registration successful
+   */
+  async registerContractClass(contractArtifact: ContractArtifact): Promise<boolean> {
+    return this.callMethod('aztec_registerContractClass', { contractArtifact });
   }
 }

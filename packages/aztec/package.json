@@ -8,7 +8,13 @@
   "exports": {
     "./rpc": {
       "import": "./dist/rpc.js",
-      "require": "./dist/rpc.js"
+      "require": "./dist/rpc.js",
+      "types": "./dist/rpc.d.ts"
+    },
+    "./helpers": {
+      "import": "./dist/helpers.js",
+      "require": "./dist/helpers.js",
+      "types": "./dist/helpers.d.ts"
     }
   },
   "publishConfig": {
@@ -27,6 +33,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
+    "@aztec/aztec.js": "0.65.2",
     "@walletmesh/aztec-rpc": "workspace:^"
   }
 }

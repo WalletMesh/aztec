@@ -1,20 +1,22 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
-import { AztecProviderRPC, type AztecWalletRPCMethodMap, type TransactionParams } from './index.js';
+import { AztecProviderRPC, type AztecWalletRPCMethodMap } from './index.js';
 import type { JSONRPCResponse, JSONRPCRequest } from '@walletmesh/jsonrpc';
-import { FunctionType } from '@aztec/foundation/abi';
-import type { FunctionAbi, ContractArtifact } from '@aztec/foundation/abi';
 import { AztecAddress } from '@aztec/aztec.js';
+import { Buffer32 } from '@aztec/foundation/buffer';
+import { randomDeployedContract } from './test-utils.js';
+
+type AztecJSONRPCRequest = JSONRPCRequest<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>;
+type AztecJSONRPCResponse = JSONRPCResponse<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>;
 
 describe('AztecProviderRPC', () => {
   let provider: AztecProviderRPC;
   let sendRequestFn: Mock;
-  let lastRequest: JSONRPCRequest<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>;
 
   beforeEach(() => {
+    // Create a mock send function that simulates responses
     sendRequestFn = vi.fn().mockImplementation((request) => {
-      lastRequest = request;
-      // Immediately respond with the result
-      const response: JSONRPCResponse<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap> = {
+      // Simulate response based on request method
+      const response: AztecJSONRPCResponse = {
         jsonrpc: '2.0',
         id: request.id,
         result:
@@ -26,8 +28,10 @@ describe('AztecProviderRPC', () => {
                 ? { success: true }
                 : true,
       };
+      // Send response back to provider
       provider.receiveResponse(response);
     });
+
     provider = new AztecProviderRPC(sendRequestFn);
   });
 
@@ -35,104 +39,152 @@ describe('AztecProviderRPC', () => {
     it('should send connect request', async () => {
       const result = await provider.connect();
       expect(result).toBe(true);
-      expect(lastRequest.method).toBe('aztec_connect');
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_connect',
+        }),
+      );
+    });
+  });
+
+  describe('registerContract', () => {
+    it('should register contract with serialization', async () => {
+      const { artifact, instance } = randomDeployedContract();
+
+      const result = await provider.registerContract(instance.address.toString(), instance, artifact);
+
+      expect(result).toBe(true);
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_registerContract',
+          params: expect.objectContaining({
+            serialized: expect.any(String),
+          }),
+        }),
+      );
     });
   });
 
   describe('getAccount', () => {
-    it('should retrieve account address', async () => {
+    it('should get account address', async () => {
+      const mockAddress = AztecAddress.random().toString();
+      sendRequestFn.mockImplementationOnce((request) => {
+        provider.receiveResponse({
+          jsonrpc: '2.0',
+          id: request.id,
+          result: mockAddress,
+        });
+      });
+
       const result = await provider.getAccount();
-      expect(typeof result).toBe('string');
-      expect(lastRequest.method).toBe('aztec_getAccount');
-    });
-  });
-
-  describe('sendTransaction', () => {
-    it('should send a single transaction request', async () => {
-      const mockFunctionAbi: FunctionAbi = {
-        name: 'test',
-        parameters: [],
-        returnTypes: [{ kind: 'boolean' }],
-      } as unknown as FunctionAbi;
-
-      const transaction: TransactionParams = {
-        contractAddress: AztecAddress.random().toString(),
-        functionAbi: mockFunctionAbi,
-        args: [],
-      };
-
-      const result = await provider.sendTransaction(transaction);
-
-      expect(result).toBe('0x123');
-      expect(lastRequest.method).toBe('aztec_sendTransaction');
-      expect(lastRequest.params).toEqual(transaction);
-    });
-
-    it('should send multiple transactions in a single request', async () => {
-      const mockFunctionAbi: FunctionAbi = {
-        name: 'test',
-        parameters: [],
-        returnTypes: [{ kind: 'boolean' }],
-      } as unknown as FunctionAbi;
-
-      const transactions: TransactionParams[] = [
-        {
-          contractAddress: AztecAddress.random().toString(),
-          functionAbi: mockFunctionAbi,
-          args: [],
-        },
-        {
-          contractAddress: AztecAddress.random().toString(),
-          functionAbi: mockFunctionAbi,
-          args: [],
-        },
-      ];
-
-      const result = await provider.sendTransaction(transactions);
-
-      expect(result).toBe('0x123');
-      expect(lastRequest.method).toBe('aztec_sendTransaction');
-      expect(lastRequest.params).toEqual(transactions);
+      expect(result).toBe(mockAddress);
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_getAccount',
+        }),
+      );
     });
   });
 
   describe('simulateTransaction', () => {
     it('should simulate transaction', async () => {
-      const mockFunctionAbi: FunctionAbi = {
-        name: 'test',
-        parameters: [],
-        returnTypes: [{ kind: 'boolean' }],
-      } as unknown as FunctionAbi;
-
-      const result = await provider.simulateTransaction({
+      const mockResult = { success: true };
+      const params = {
         contractAddress: AztecAddress.random().toString(),
-        functionAbi: mockFunctionAbi,
-        args: [],
+        functionName: 'test',
+        args: [1, 2, 3],
+      };
+
+      sendRequestFn.mockImplementationOnce((request) => {
+        provider.receiveResponse({
+          jsonrpc: '2.0',
+          id: request.id,
+          result: mockResult,
+        });
       });
 
-      expect(result).toEqual({ success: true });
-      expect(lastRequest.method).toBe('aztec_simulateTransaction');
+      const result = await provider.simulateTransaction(params);
+      expect(result).toEqual(mockResult);
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_simulateTransaction',
+          params,
+        }),
+      );
     });
   });
 
   describe('registerContact', () => {
     it('should register contact', async () => {
-      const mockContact = AztecAddress.random().toString();
-      const result = await provider.registerContact(mockContact);
+      const contact = AztecAddress.random().toString();
 
+      sendRequestFn.mockImplementationOnce((request) => {
+        provider.receiveResponse({
+          jsonrpc: '2.0',
+          id: request.id,
+          result: true,
+        });
+      });
+
+      const result = await provider.registerContact(contact);
       expect(result).toBe(true);
-      expect(lastRequest.method).toBe('aztec_registerContact');
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_registerContact',
+          params: { contact },
+        }),
+      );
     });
   });
 
-  describe('registerContract', () => {
-    it('should register contract', async () => {
-      const mockContractArtifact = {} as ContractArtifact;
-      const mockAddress = AztecAddress.random().toString();
-      const result = await provider.registerContract(mockContractArtifact, mockAddress);
+  describe('registerContractClass', () => {
+    it('should register contract class with serialization', async () => {
+      const { artifact } = randomDeployedContract();
+
+      const result = await provider.registerContractClass(artifact);
 
       expect(result).toBe(true);
-      expect(lastRequest.method).toBe('aztec_registerContract');
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_registerContractClass',
+          params: expect.objectContaining({
+            serialized: expect.any(String),
+          }),
+        }),
+      );
+    });
+  });
+
+  describe('sendTransaction', () => {
+    it('should send transactions with proper serialization', async () => {
+      const mockTxHash = Buffer32.random();
+      sendRequestFn.mockImplementationOnce((request) => {
+        provider.receiveResponse({
+          jsonrpc: '2.0',
+          id: request.id,
+          result: mockTxHash,
+        });
+      });
+
+      const params = {
+        functionCalls: [
+          {
+            contractAddress: AztecAddress.random().toString(),
+            functionName: 'test',
+            args: [1, 2, 3],
+          },
+        ],
+        authwit: ['mockAuthWit'],
+      };
+
+      const result = await provider.sendTransaction(params);
+      expect(result).toBe(mockTxHash);
+      expect(sendRequestFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'aztec_sendTransaction',
+          params,
+        }),
+      );
     });
   });
 });

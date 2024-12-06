@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { AztecProviderRPC } from '@walletmesh/aztec/rpc';
 import { AztecAddress } from '@aztec/aztec.js';
-import { CounterContractArtifact, TokenContractArtifact } from '@aztec/noir-contracts.js';
-import type { FunctionAbi } from '@aztec/foundation/abi';
-import { getFunctionArtifact } from '@aztec/foundation/abi';
 
 // These are the addresses deployed using the sandbox setup. See <gitroot>/sandbox/.
 const TOKEN_CONTRACT = '0x1747aa930e8c91330cddd0ad9219c579e0a9658bef2ad066f290a4d05a329308';
@@ -17,7 +14,7 @@ const DApp: React.FC = () => {
   const [counterValue, setCounterValue] = useState<string>('');
 
   const connectWallet = () => {
-    const newClient = new AztecProviderRPC((request) => {
+    const newClient = new AztecProviderRPC(async (request) => {
       console.log('Sending request:', request); // Debug log
       window.postMessage({
         type: 'wallet_request',
@@ -62,20 +59,27 @@ const DApp: React.FC = () => {
 
   const mintTokens = () => {
     if (client) {
-      // mint_to_public(to: AztecAddress, amount: Field)
       const args = [account, 10000000000000000000000];
-      const functionAbi: FunctionAbi = getFunctionArtifact(TokenContractArtifact, 'mint_to_public');
-      client.sendTransaction({ contractAddress: TOKEN_CONTRACT, functionAbi, args }).then((transactionHash) => {
-        console.log('Mint transaction sent, hash:', transactionHash);
-      }).catch((error) => {
-        window.alert(`Transaction failed: ${error.message}`);
-      });
+      client.sendTransaction({
+        functionCalls: [
+          {
+            contractAddress: TOKEN_CONTRACT,
+            functionName: 'mint_to_public',
+            args,
+          },
+        ],
+      })
+        .then((transactionHash) => {
+          console.log('Mint transaction sent, hash:', transactionHash);
+        })
+        .catch((error) => {
+          window.alert(`Transaction failed: ${error.message}`);
+        });
     }
-  }
+  };
 
   const transferTokens = () => {
     if (client) {
-      // transfer_in_public(from: AztecAddress, to: AztecAddress, amount: Field, nonce: Field)
       const to = AztecAddress.random();
       const args = [
         account, // from
@@ -83,53 +87,106 @@ const DApp: React.FC = () => {
         100000,
         0, // nonce
       ];
-      const functionAbi: FunctionAbi = getFunctionArtifact(TokenContractArtifact, 'transfer_in_public');
-      client.sendTransaction({ contractAddress: TOKEN_CONTRACT, functionAbi, args }).then((transactionHash) => {
-        console.log('Transfer transaction sent, hash:', transactionHash);
-      }).catch((error) => {
-        window.alert(`Transaction failed: ${error.message}`);
-      });
+      client.sendTransaction({
+        functionCalls: [
+          {
+            contractAddress: TOKEN_CONTRACT,
+            functionName: 'transfer_in_public',
+            args,
+          },
+        ],
+      })
+        .then((transactionHash) => {
+          console.log('Transfer transaction sent, hash:', transactionHash);
+        })
+        .catch((error) => {
+          window.alert(`Transaction failed: ${error.message}`);
+        });
     }
-  }
+  };
 
   const checkTokenBalance = () => {
     if (client) {
-      // balance_of_public(owner: AztecAddress) -> Field
       const args = [account];
-      const functionAbi: FunctionAbi = getFunctionArtifact(TokenContractArtifact, 'balance_of_public');
-      client.simulateTransaction({ contractAddress: TOKEN_CONTRACT, functionAbi, args }).then((result) => {
-        console.log('Token balance:', result);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setTokenBalance((result as any).toString());
-      });
+      client.simulateTransaction({
+        contractAddress: TOKEN_CONTRACT,
+        functionName: 'balance_of_public',
+        args,
+      })
+        .then((result) => {
+          console.log('Token balance:', result);
+          setTokenBalance((result as bigint).toString());
+        })
+        .catch((error) => {
+          window.alert(`Simulation failed: ${error.message}`);
+        });
     }
-  }
+  };
 
   const incrementCounter = () => {
     if (client) {
-      // increment(owner: AztecAddress, outgoing_viewer: AztecAddress) {
       const args = [account, account];
-      const functionAbi: FunctionAbi = getFunctionArtifact(CounterContractArtifact, 'increment');
-      client.sendTransaction({ contractAddress: COUNTER_CONTRACT, functionAbi, args }).then((transactionHash) => {
-        console.log('Increment transaction sent, hash:', transactionHash);
-      }).catch((error) => {
-        window.alert(`Transaction failed: ${error.message}`);
-      });
+      client.sendTransaction({
+        functionCalls: [
+          {
+            contractAddress: COUNTER_CONTRACT,
+            functionName: 'increment',
+            args,
+          },
+        ],
+      })
+        .then((transactionHash) => {
+          console.log('Increment transaction sent, hash:', transactionHash);
+        })
+        .catch((error) => {
+          window.alert(`Transaction failed: ${error.message}`);
+        });
+    }
+  };
+
+  const incrementCounterTwice = () => {
+    if (client) {
+      const args = [account, account];
+      client.sendTransaction({
+        functionCalls: [
+          {
+            contractAddress: COUNTER_CONTRACT,
+            functionName: 'increment',
+            args,
+          },
+          {
+            contractAddress: COUNTER_CONTRACT,
+            functionName: 'increment',
+            args,
+          },
+        ],
+      })
+        .then((transactionHash) => {
+          console.log('Increment twice transaction sent, hash:', transactionHash);
+        })
+        .catch((error) => {
+          window.alert(`Transaction failed: ${error.message}`);
+        });
     }
   }
 
   const getCounter = () => {
     if (client) {
-      // getCounter(owner: AztecAddress, viewer: AztecAddress)
       const args = [account];
-      const functionAbi: FunctionAbi = getFunctionArtifact(CounterContractArtifact, 'get_counter');
-      client.simulateTransaction({ contractAddress: COUNTER_CONTRACT, functionAbi, args }).then((result) => {
-        console.log('Counter value:', result);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setCounterValue((result as any).toString());
-      });
+      client.simulateTransaction({
+        contractAddress: COUNTER_CONTRACT,
+        functionName: 'get_counter',
+        args,
+      })
+        .then((result) => {
+          console.log('Counter value:', result);
+          setCounterValue((result as bigint).toString());
+        })
+        .catch((error) => {
+          window.alert(`Simulation failed: ${error.message}`);
+        });
     }
-  }
+  };
 
   return (
     <div>
@@ -142,6 +199,7 @@ const DApp: React.FC = () => {
           <button onClick={transferTokens}>Transfer Tokens</button>
           <button onClick={checkTokenBalance}>Token Balance</button>
           <button onClick={incrementCounter}>Increment Counter</button>
+          <button onClick={incrementCounterTwice}>Increment Counter TWICE</button>
           <button onClick={getCounter}>Get Counter</button>
 
           {tokenBalance && <p>Token balance: {tokenBalance}</p>}

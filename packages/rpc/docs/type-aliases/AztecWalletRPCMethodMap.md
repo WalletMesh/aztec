@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.6**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
 
 ***
 
@@ -18,9 +18,9 @@ A mapping of JSON-RPC methods to their parameters and return types for Aztec Wal
 
 Connects to the Aztec network.
 
-#### aztec\_connect.params
+#### Returns
 
-> **params**: `null`
+A boolean indicating if the connection was successful
 
 #### aztec\_connect.result
 
@@ -30,11 +30,11 @@ Connects to the Aztec network.
 
 > **aztec\_getAccount**: `object`
 
-Retrieves the account address.
+Gets the account address from the wallet.
 
-#### aztec\_getAccount.params
+#### Returns
 
-> **params**: `null`
+The account address as a string
 
 #### aztec\_getAccount.result
 
@@ -44,7 +44,15 @@ Retrieves the account address.
 
 > **aztec\_registerContact**: `object`
 
-Registers a contact in the user's PXE.
+Registers a contact in the user's PXE
+
+#### Param
+
+The contact address to register
+
+#### Returns
+
+True if registration was successful
 
 #### aztec\_registerContact.params
 
@@ -62,7 +70,15 @@ Registers a contact in the user's PXE.
 
 > **aztec\_registerContract**: `object`
 
-Registers a contract in the user's PXE.
+Registers a contract instance in the user's PXE.
+
+#### Param
+
+The contract details to register
+
+#### Returns
+
+True if registration was successful
 
 #### aztec\_registerContract.params
 
@@ -72,11 +88,41 @@ Registers a contract in the user's PXE.
 
 > **contractAddress**: `string`
 
-#### aztec\_registerContract.params.contractArtifact
+#### aztec\_registerContract.params.contractArtifact?
+
+> `optional` **contractArtifact**: `ContractArtifact`
+
+#### aztec\_registerContract.params.contractInstance
+
+> **contractInstance**: `ContractInstance`
+
+#### aztec\_registerContract.result
+
+> **result**: `boolean`
+
+### aztec\_registerContractClass
+
+> **aztec\_registerContractClass**: `object`
+
+Registers a contract class in the user's PXE.
+
+#### Param
+
+The contract artifact to register
+
+#### Returns
+
+True if registration was successful
+
+#### aztec\_registerContractClass.params
+
+> **params**: `object`
+
+#### aztec\_registerContractClass.params.contractArtifact
 
 > **contractArtifact**: `ContractArtifact`
 
-#### aztec\_registerContract.result
+#### aztec\_registerContractClass.result
 
 > **result**: `boolean`
 
@@ -84,19 +130,19 @@ Registers a contract in the user's PXE.
 
 > **aztec\_sendTransaction**: `object`
 
-Sends one or more transactions to the Aztec network.
+Sends transactions to the Aztec network.
 
 #### Param
 
-A single transaction or an array of transactions.
+The transactions to execute and optional authorization witnesses
 
 #### Returns
 
-The transaction hash as a string.
+The transaction hash as a string
 
 #### aztec\_sendTransaction.params
 
-> **params**: [`TransactionParams`](TransactionParams.md) \| [`TransactionParams`](TransactionParams.md)[]
+> **params**: [`TransactionParams`](TransactionParams.md)
 
 #### aztec\_sendTransaction.result
 
@@ -106,11 +152,19 @@ The transaction hash as a string.
 
 > **aztec\_simulateTransaction**: `object`
 
-Simulates a transaction on the Aztec network.
+Simulates a transaction without executing it.
+
+#### Param
+
+The transaction to simulate
+
+#### Returns
+
+The simulation result
 
 #### aztec\_simulateTransaction.params
 
-> **params**: [`TransactionParams`](TransactionParams.md)
+> **params**: [`TransactionFunctionCall`](TransactionFunctionCall.md)
 
 #### aztec\_simulateTransaction.result
 
@@ -118,4 +172,4 @@ Simulates a transaction on the Aztec network.
 
 ## Defined in
 
-[packages/rpc/src/types.ts:17](https://github.com/WalletMesh/aztec/blob/60fbe0c0b3a152c15fef7d36614ba6484b090050/packages/rpc/src/types.ts#L17)
+[packages/rpc/src/types.ts:33](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/types.ts#L33)

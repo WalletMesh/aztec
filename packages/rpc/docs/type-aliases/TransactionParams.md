@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.6**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
 
 ***
 
@@ -8,32 +8,22 @@
 
 > **TransactionParams**: `object`
 
+Parameters for sending transactions.
+
 ## Type declaration
 
-### args
+### authwits?
 
-> **args**: `unknown`[]
+> `optional` **authwits**: `string`[]
 
-The arguments to pass to the function.
+Optional array of authorization witnesses for the transaction
 
-### authwit?
+### functionCalls
 
-> `optional` **authwit**: `string`
+> **functionCalls**: [`TransactionFunctionCall`](TransactionFunctionCall.md)[]
 
-Optional authorization witness as a string.
-
-### contractAddress
-
-> **contractAddress**: `string`
-
-The address of the contract to interact with.
-
-### functionAbi
-
-> **functionAbi**: `FunctionAbi`
-
-The ABI of the function to call.
+Array of function calls to execute
 
 ## Defined in
 
-[packages/rpc/src/types.ts:3](https://github.com/WalletMesh/aztec/blob/60fbe0c0b3a152c15fef7d36614ba6484b090050/packages/rpc/src/types.ts#L3)
+[packages/rpc/src/types.ts:22](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/types.ts#L22)

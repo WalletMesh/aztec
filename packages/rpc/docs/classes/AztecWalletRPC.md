@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.6**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
 
 ***
 
@@ -6,11 +6,12 @@
 
 # Class: AztecWalletRPC
 
-JSON-RPC interface to an Aztec Wallet.
+JSON-RPC interface implementation for an Aztec Wallet.
+Handles communication between dapps and the wallet through JSON-RPC.
 
 ## Extends
 
-- `JSONRPCServer`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\>
+- `JSONRPCServer`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), [`AztecWalletContext`](../type-aliases/AztecWalletContext.md)\>
 
 ## Constructors
 
@@ -26,13 +27,13 @@ Creates a new AztecWalletRPC instance.
 
 `Wallet`
 
-The underlying Wallet instance.
+The underlying Wallet instance
 
 ##### sendResponse
 
 (`response`) => `Promise`\<`void`\>
 
-A function to send JSON-RPC responses.
+Function to send JSON-RPC responses
 
 #### Returns
 
@@ -40,11 +41,11 @@ A function to send JSON-RPC responses.
 
 #### Overrides
 
-`JSONRPCServer<AztecWalletRPCMethodMap>.constructor`
+`JSONRPCServer<AztecWalletRPCMethodMap, AztecWalletContext>.constructor`
 
 #### Defined in
 
-[packages/rpc/src/wallet.ts:31](https://github.com/WalletMesh/aztec/blob/60fbe0c0b3a152c15fef7d36614ba6484b090050/packages/rpc/src/wallet.ts#L31)
+[packages/rpc/src/wallet.ts:37](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/wallet.ts#L37)
 
 ## Methods
 
@@ -58,7 +59,7 @@ Adds a middleware function to the stack.
 
 ##### middleware
 
-`JSONRPCMiddleware`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\>
+`JSONRPCMiddleware`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), [`AztecWalletContext`](../type-aliases/AztecWalletContext.md)\>
 
 The middleware function to add.
 
@@ -78,21 +79,25 @@ A function to remove the middleware from the stack.
 
 #### Defined in
 
-node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:30
+node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:39
 
 ***
 
 ### receiveRequest()
 
-> **receiveRequest**(`request`): `Promise`\<`void`\>
+> **receiveRequest**(`context`, `request`): `Promise`\<`void`\>
 
 Receives a JSON-RPC request and handles it.
 
 #### Parameters
 
+##### context
+
+[`AztecWalletContext`](../type-aliases/AztecWalletContext.md)
+
 ##### request
 
-`JSONRPCRequest`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), keyof [`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\>
+`JSONRPCRequest`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), keyof [`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), `JSONRPCParams`\>
 
 The JSON-RPC request object.
 
@@ -106,13 +111,13 @@ The JSON-RPC request object.
 
 #### Defined in
 
-node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:36
+node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:45
 
 ***
 
 ### registerMethod()
 
-> **registerMethod**\<`M`\>(`name`, `handler`): `void`
+> **registerMethod**\<`M`\>(`name`, `handler`, `serializer`?): `void`
 
 Registers a method that can be called remotely.
 
@@ -130,9 +135,15 @@ The method name.
 
 ##### handler
 
-(`params`) => [`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\[`M`\]\[`"result"`\] \| `Promise`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\[`M`\]\[`"result"`\]\>
+`MethodHandler`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md), `M`, [`AztecWalletContext`](../type-aliases/AztecWalletContext.md)\>
 
 The function to handle the method call.
+
+##### serializer?
+
+`JSONRPCSerializer`\<[`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\[`M`\]\[`"params"`\], [`AztecWalletRPCMethodMap`](../type-aliases/AztecWalletRPCMethodMap.md)\[`M`\]\[`"result"`\]\>
+
+Optional serializer for parameters and result.
 
 #### Returns
 
@@ -144,4 +155,4 @@ The function to handle the method call.
 
 #### Defined in
 
-node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:23
+node\_modules/@walletmesh/jsonrpc/dist/server.d.ts:32

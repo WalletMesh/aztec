@@ -8,13 +8,12 @@ with the [Aztec](https://aztec.network) blockchain.
 ```bash
 npm install @walletmesh/aztec
 ```
-
 ## Usage
+
 ### On the dApp (client) side
 
 ```js
 import { AztecProviderRPC } from '@walletmesh/aztec/rpc';
-import type { FunctionAbi } from '@aztec/foundation/abi';
 
 // Create provider that sends requests via postMessage
 const provider = new AztecProviderRPC(request => {
@@ -27,7 +26,7 @@ window.addEventListener('message', event => {
     provider.receiveResponse(response);
 });
 
-// Example: Connect and interact with a contract
+// Example: Connect and interact with contracts
 async function interact() {
     // Connect to wallet
     await provider.connect();
@@ -35,19 +34,51 @@ async function interact() {
     // Get user's account address
     const account = await provider.getAccount();
 
-    // Send a transaction
-    const txHash = await provider.sendTransaction(
-        contractAddress,
-        functionAbi,
-        args
+    // Register a contact
+    await provider.registerContact("0x1234...");
+
+    // Register a contract class
+    await provider.registerContractClass(contractArtifact);
+
+    // Register a contract instance
+    await provider.registerContract(
+        "0x5678...",
+        contractInstance,
+        contractArtifact // optional if class already registered
     );
 
     // Simulate a transaction
-    const result = await provider.simulateTransaction(
-        contractAddress, 
-        functionAbi,
-        args
-    );
+    const result = await provider.simulateTransaction({
+        contractAddress: "0x5678...",
+        functionName: "transfer",
+        args: [recipient, amount]
+    });
+
+    // Send a single transaction
+    const txHash = await provider.sendTransaction({
+        functionCalls: [{
+            contractAddress: "0x5678...",
+            functionName: "transfer",
+            args: [recipient, amount]
+        }]
+    });
+
+    // Send multiple transactions with auth witnesses
+    const txHash2 = await provider.sendTransaction({
+        functionCalls: [
+            {
+                contractAddress: "0x5678...",
+                functionName: "transfer",
+                args: [recipientA, amountA]
+            },
+            {
+                contractAddress: "0x9012...",
+                functionName: "mint",
+                args: [recipientB, amountB]
+            }
+        ],
+        authwits: ["0xabcd..."]  // Optional authorization witnesses
+    });
 }
 ```
 
@@ -57,10 +88,7 @@ async function interact() {
 import { AztecWalletRPC } from '@walletmesh/aztec/rpc';
 import type { Wallet } from '@aztec/aztec.js';
 
-// Setup your Aztec wallet instance
-const wallet: Wallet = setupWallet();
-
-// Initialize WalletRPC with your Aztec wallet instance and a response handler
+// Initialize with your Aztec wallet instance
 const walletRPC = new AztecWalletRPC(
     wallet,
     response => {
@@ -71,6 +99,9 @@ const walletRPC = new AztecWalletRPC(
 // Handle incoming requests
 window.addEventListener('message', event => {
     const request = JSON.parse(event.data);
-    walletRPC.receiveRequest(request);
+    walletRPC.receiveRequest(request, {
+        // Context object enabling middleware to access the PXE
+        pxe: pxeInstance
+    });
 });
 ```

@@ -1,4 +1,4 @@
-**@walletmesh/aztec-rpc v0.0.7**
+**@walletmesh/aztec-rpc v0.0.8**
 
 ***
 
@@ -125,7 +125,7 @@ import type { Wallet } from '@aztec/aztec.js';
 // Initialize with your Aztec wallet instance
 const walletRPC = new AztecWalletRPC(
     wallet,
-    response => {
+    (context, request, response) => {
         window.postMessage(JSON.stringify(response), '*');
     }
 );
@@ -133,9 +133,9 @@ const walletRPC = new AztecWalletRPC(
 // Handle incoming requests
 window.addEventListener('message', event => {
     const request = JSON.parse(event.data);
-    walletRPC.receiveRequest(request, {
-        // Context object enabling middleware to access the PXE
-        pxe: pxeInstance
-    });
+    walletRPC.receiveRequest(
+        { pxe: pxeInstance }, // Context object enabling middleware to access the PXE
+        request
+    );
 });
 ```

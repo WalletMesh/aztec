@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.8**](../README.md)
 
 ***
 
@@ -44,7 +44,7 @@ Optional additional error data
 
 #### Defined in
 
-[packages/rpc/src/errors.ts:27](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/errors.ts#L27)
+[packages/rpc/src/errors.ts:27](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/errors.ts#L27)
 
 ## Properties
 

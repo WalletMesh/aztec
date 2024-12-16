@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.8**](../README.md)
 
 ***
 
@@ -38,7 +38,7 @@ Function to send JSON-RPC requests
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:19](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L19)
+[packages/rpc/src/provider.ts:19](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L19)
 
 ## Methods
 
@@ -104,7 +104,7 @@ True if connection successful
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:41](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L41)
+[packages/rpc/src/provider.ts:41](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L41)
 
 ***
 
@@ -122,7 +122,7 @@ The account address as a string
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:49](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L49)
+[packages/rpc/src/provider.ts:49](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L49)
 
 ***
 
@@ -216,7 +216,7 @@ True if registration successful
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:76](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L76)
+[packages/rpc/src/provider.ts:76](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L76)
 
 ***
 
@@ -254,7 +254,7 @@ True if registration successful
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:87](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L87)
+[packages/rpc/src/provider.ts:87](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L87)
 
 ***
 
@@ -280,7 +280,7 @@ True if registration successful
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:104](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L104)
+[packages/rpc/src/provider.ts:104](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L104)
 
 ***
 
@@ -340,7 +340,7 @@ The transaction hash as a string
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:58](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L58)
+[packages/rpc/src/provider.ts:58](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L58)
 
 ***
 
@@ -366,4 +366,4 @@ The result of the transaction simulation
 
 #### Defined in
 
-[packages/rpc/src/provider.ts:67](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/provider.ts#L67)
+[packages/rpc/src/provider.ts:67](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/provider.ts#L67)

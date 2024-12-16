@@ -1,4 +1,4 @@
-[**@walletmesh/aztec-rpc v0.0.7**](../README.md)
+[**@walletmesh/aztec-rpc v0.0.8**](../README.md)
 
 ***
 
@@ -31,7 +31,7 @@ The underlying Wallet instance
 
 ##### sendResponse
 
-(`response`) => `Promise`\<`void`\>
+(`context`, `request`, `response`) => `Promise`\<`void`\>
 
 Function to send JSON-RPC responses
 
@@ -45,7 +45,7 @@ Function to send JSON-RPC responses
 
 #### Defined in
 
-[packages/rpc/src/wallet.ts:37](https://github.com/WalletMesh/aztec/blob/373b9ce85d8692237c6f741e27593ac2753f00a5/packages/rpc/src/wallet.ts#L37)
+[packages/rpc/src/wallet.ts:38](https://github.com/WalletMesh/aztec/blob/d8d2f2cdd3d6049cb75dc7c911ba6918ba4c3225/packages/rpc/src/wallet.ts#L38)
 
 ## Methods
 

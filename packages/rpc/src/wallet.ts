@@ -10,6 +10,7 @@ import type { Wallet } from '@aztec/aztec.js';
 import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
 
 import { JSONRPCServer } from '@walletmesh/jsonrpc';
+import type { JSONRPCParams, JSONRPCRequest, JSONRPCResponse } from '@walletmesh/jsonrpc';
 
 import type {
   AztecWalletContext,
@@ -34,7 +35,7 @@ export class AztecWalletRPC extends JSONRPCServer<AztecWalletRPCMethodMap, Aztec
    * @param wallet - The underlying Wallet instance
    * @param sendResponse - Function to send JSON-RPC responses
    */
-  constructor(wallet: Wallet, sendResponse: (response: unknown) => Promise<void>) {
+  constructor(wallet: Wallet, sendResponse: (context: AztecWalletContext, request: JSONRPCRequest<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap, JSONRPCParams>, response: JSONRPCResponse<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>) => Promise<void>) {
     super(sendResponse);
     this.wallet = wallet;
     this.registerMethods();

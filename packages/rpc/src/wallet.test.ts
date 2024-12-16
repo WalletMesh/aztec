@@ -63,11 +63,14 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: true,
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: true,
+        });
     });
   });
 
@@ -83,11 +86,14 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: mockAddress.toString(),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: mockAddress.toString(),
+        });
     });
   });
 
@@ -136,11 +142,14 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: mockTxHash.toString(),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: mockTxHash.toString(),
+        });
     });
 
     it('should handle sending multiple transactions', async () => {
@@ -193,11 +202,14 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 2,
-        result: mockTxHash.toString(),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 2,
+          result: mockTxHash.toString(),
+        });
     });
 
     it('should handle sending a transaction with an authwit', async () => {
@@ -262,11 +274,14 @@ describe('AztecWalletRPC', () => {
         }),
       );
 
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 3,
-        result: mockTxHash.toString(),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 3,
+          result: mockTxHash.toString(),
+        });
     });
 
     it('should handle multiple authwits', async () => {
@@ -355,11 +370,14 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: mockResult,
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: mockResult,
+        });
     });
   });
 
@@ -376,11 +394,14 @@ describe('AztecWalletRPC', () => {
 
       await walletRPC.receiveRequest(context, request);
       expect(mockWallet.registerContact).toHaveBeenCalled();
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: true,
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: true,
+        });
     });
 
     it('should handle registration failure', async () => {
@@ -398,11 +419,14 @@ describe('AztecWalletRPC', () => {
 
       await walletRPC.receiveRequest(context, request);
       expect(mockWallet.registerContact).toHaveBeenCalled();
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        error: expect.objectContaining(AztecWalletRPCErrorMap.contactNotRegistered),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          error: expect.objectContaining(AztecWalletRPCErrorMap.contactNotRegistered),
+        });
     });
   });
 
@@ -462,11 +486,14 @@ describe('AztecWalletRPC', () => {
           artifact: expect.objectContaining({ name: artifact.name }),
         }),
       );
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        error: expect.objectContaining(AztecWalletRPCErrorMap.contractInstanceNotRegistered),
-        id: 1,
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          error: expect.objectContaining(AztecWalletRPCErrorMap.contractInstanceNotRegistered),
+          id: 1,
+        });
     });
   });
 
@@ -490,11 +517,14 @@ describe('AztecWalletRPC', () => {
           name: artifact.name,
         }),
       );
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        result: true,
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          result: true,
+        });
     });
   });
 
@@ -515,14 +545,17 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        error: expect.objectContaining({
-          code: -32003,
-          message: 'Contract instance not registered',
-        }),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          error: expect.objectContaining({
+            code: -32003,
+            message: 'Contract instance not registered',
+          }),
+        });
     });
 
     it('should throw error when contract class not registered', async () => {
@@ -542,14 +575,17 @@ describe('AztecWalletRPC', () => {
       };
 
       await walletRPC.receiveRequest(context, request);
-      expect(sendResponseFn).toHaveBeenCalledWith({
-        jsonrpc: '2.0',
-        id: 1,
-        error: expect.objectContaining({
-          code: -32004,
-          message: 'Contract class not registered',
-        }),
-      });
+      expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          error: expect.objectContaining({
+            code: -32004,
+            message: 'Contract class not registered',
+          }),
+        });
     });
 
     it('should use cached contract artifact when available', async () => {
@@ -622,6 +658,8 @@ describe('AztecWalletRPC', () => {
 
       await walletRPC.receiveRequest(context, request);
       expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
         expect.objectContaining({
           error: expect.objectContaining(AztecWalletRPCErrorMap.contractInstanceNotRegistered),
         }),
@@ -654,6 +692,8 @@ describe('AztecWalletRPC', () => {
 
       await walletRPC.receiveRequest(context, request);
       expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
         expect.objectContaining({
           error: expect.objectContaining({
             code: -32003,
@@ -681,6 +721,8 @@ describe('AztecWalletRPC', () => {
 
       await walletRPC.receiveRequest(context, request);
       expect(sendResponseFn).toHaveBeenCalledWith(
+        expect.objectContaining({ "pxe": expect.any(Object) }),
+        request,
         expect.objectContaining({
           error: expect.objectContaining({
             code: -32004,

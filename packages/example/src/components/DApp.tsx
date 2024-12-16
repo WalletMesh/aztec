@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { AztecProviderRPC } from '@walletmesh/aztec/rpc';
 import { AztecAddress } from '@aztec/aztec.js';
 
-// These are the addresses deployed using the sandbox setup. See <gitroot>/sandbox/.
-const TOKEN_CONTRACT = '0x1747aa930e8c91330cddd0ad9219c579e0a9658bef2ad066f290a4d05a329308';
-const COUNTER_CONTRACT = '0x15b79bc66de07a983761fee80f85853768b6502300fd62ca59221ad33a801738';
+import { TEST_TOKEN_CONTRACT, TEST_COUNTER_CONTRACT } from '../lib/sandbox-data';
 
 const DApp: React.FC = () => {
   const [client, setClient] = useState<AztecProviderRPC | null>(null);
@@ -63,7 +61,7 @@ const DApp: React.FC = () => {
       client.sendTransaction({
         functionCalls: [
           {
-            contractAddress: TOKEN_CONTRACT,
+            contractAddress: TEST_TOKEN_CONTRACT,
             functionName: 'mint_to_public',
             args,
           },
@@ -90,7 +88,7 @@ const DApp: React.FC = () => {
       client.sendTransaction({
         functionCalls: [
           {
-            contractAddress: TOKEN_CONTRACT,
+            contractAddress: TEST_TOKEN_CONTRACT,
             functionName: 'transfer_in_public',
             args,
           },
@@ -109,7 +107,7 @@ const DApp: React.FC = () => {
     if (client) {
       const args = [account];
       client.simulateTransaction({
-        contractAddress: TOKEN_CONTRACT,
+        contractAddress: TEST_TOKEN_CONTRACT,
         functionName: 'balance_of_public',
         args,
       })
@@ -129,7 +127,7 @@ const DApp: React.FC = () => {
       client.sendTransaction({
         functionCalls: [
           {
-            contractAddress: COUNTER_CONTRACT,
+            contractAddress: TEST_COUNTER_CONTRACT,
             functionName: 'increment',
             args,
           },
@@ -150,12 +148,12 @@ const DApp: React.FC = () => {
       client.sendTransaction({
         functionCalls: [
           {
-            contractAddress: COUNTER_CONTRACT,
+            contractAddress: TEST_COUNTER_CONTRACT,
             functionName: 'increment',
             args,
           },
           {
-            contractAddress: COUNTER_CONTRACT,
+            contractAddress: TEST_COUNTER_CONTRACT,
             functionName: 'increment',
             args,
           },
@@ -174,7 +172,7 @@ const DApp: React.FC = () => {
     if (client) {
       const args = [account];
       client.simulateTransaction({
-        contractAddress: COUNTER_CONTRACT,
+        contractAddress: TEST_COUNTER_CONTRACT,
         functionName: 'get_counter',
         args,
       })

@@ -6,8 +6,7 @@ import {
   type TransactionParams,
 } from '@walletmesh/aztec/rpc';
 import { getSchnorrWallet } from '@aztec/accounts/schnorr';
-import { createPXEClient, AztecAddress, Fr, type PXE } from '@aztec/aztec.js';
-import { deriveSigningKey } from '@aztec/circuits.js';
+import { createPXEClient, type PXE } from '@aztec/aztec.js';
 import Approve from './Approve.js';
 import './Wallet.css';
 import FunctionCallDisplay from './FunctionCallDisplay.js';
@@ -16,10 +15,7 @@ import { createApprovalMiddleware } from '../middlewares/approvalMiddleware';
 import { createHistoryMiddleware, type HistoryEntry } from '../middlewares/historyMiddleware';
 import { functionArgNamesMiddleware } from '../middlewares/functionArgNamesMiddleware';
 
-// Test account deployed in the sandbox - see /sandbox/account.json
-const TEST_ACCOUNT_SCHNORR_ADDRESS = AztecAddress.fromString('0x0627c5a3c006c7cf2413042101281424c7fded01c285c5d834c3ca5fc855f52c');
-const TEST_ACCOUNT_SCHNORR_SECRET = Fr.fromString('0x2490e659effed473b8900b6ffca8b2dfa0b50f3ee6493684477923b4dedbb275');
-const TEST_ACCOUNT_SCHNORR_SIGNING = deriveSigningKey(TEST_ACCOUNT_SCHNORR_SECRET);
+import { TEST_ACCOUNT_SCHNORR_ADDRESS, TEST_ACCOUNT_SCHNORR_SIGNING } from '../lib/sandbox-data.js';
 
 function isTransactionParams(params: unknown): params is TransactionParams {
   return (
@@ -61,7 +57,7 @@ const Wallet: FC = () => {
         const wallet = await getSchnorrWallet(pxe, TEST_ACCOUNT_SCHNORR_ADDRESS, TEST_ACCOUNT_SCHNORR_SIGNING);
         console.debug('Wallet loaded:', wallet.getAddress().toString());
 
-        server = new AztecWalletRPC(wallet, async (response) => {
+        server = new AztecWalletRPC(wallet, async (_context, _request, response) => {
           console.log('Server sending response:', response);
           window.postMessage({ type: 'wallet_response', data: response }, '*');
         });

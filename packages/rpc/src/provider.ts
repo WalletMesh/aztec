@@ -1,107 +1,246 @@
-import type { ContractArtifact } from '@aztec/aztec.js';
-import type { ContractInstance } from '@aztec/circuits.js';
-
-import { JSONRPCClient } from '@walletmesh/jsonrpc';
-import type { JSONRPCRequest } from '@walletmesh/jsonrpc';
-
-import type { AztecWalletRPCMethodMap, TransactionFunctionCall, TransactionParams } from './types.js';
-import { registerContractClassSerializer, registerContractSerializer } from './utils.js';
+import { JSONRPCNode } from '@walletmesh/jsonrpc';
+import type { Transport } from '@walletmesh/jsonrpc';
+import type { RouterMethodMap, RouterEventMap } from '@walletmesh/router';
+import { AztecWalletRPCError } from './errors.js';
+import type { AztecChainId } from './types.js';
 
 /**
- * Client-side provider for interacting with an Aztec Wallet through JSON-RPC.
- * @public
+ * Provider for interacting with multiple Aztec chains through WalletMesh router.
+ *
+ * This class implements the client-side interface for dApps to communicate with Aztec wallets.
+ * It handles:
+ * - Connection management for multiple chains
+ * - Session tracking
+ * - Method calls with proper context
+ * - Event handling for wallet state changes
+ *
+ * @example
+ * ```typescript
+ * // Create provider with transport
+ * const provider = new AztecProviderRPC(transport);
+ *
+ * // Connect to chains
+ * await provider.connect(['aztec:testnet', 'aztec:devnet']);
+ *
+ * // Get account address
+ * const address = await provider.getAccount('aztec:testnet');
+ *
+ * // Send transaction
+ * const txHash = await provider.sendTransaction('aztec:testnet', {
+ *   functionCalls: [{
+ *     contractAddress: "0x...",
+ *     functionName: "transfer",
+ *     args: [recipient, amount]
+ *   }]
+ * });
+ * ```
  */
-export class AztecProviderRPC extends JSONRPCClient<AztecWalletRPCMethodMap> {
-  /**
-   * Creates a new AztecProviderRPC instance
-   * @param sendRequest - Function to send JSON-RPC requests
-   */
-  constructor(
-    sendRequest: (
-      request: JSONRPCRequest<AztecWalletRPCMethodMap, keyof AztecWalletRPCMethodMap>,
-    ) => Promise<unknown>,
-  ) {
-    super(sendRequest);
-    this.registerSerializers();
+export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMap> {
+  private sessionId?: string;
+  private connectedChains: Set<AztecChainId>;
+  private requestedChains: Set<AztecChainId>;
+
+  constructor(transport: Transport) {
+    super(transport);
+    this.connectedChains = new Set();
+    this.requestedChains = new Set();
+
+    // Bind event handlers
+    this.handleWalletStateChanged = this.handleWalletStateChanged.bind(this);
+    this.handleSessionTerminated = this.handleSessionTerminated.bind(this);
+
+    // Register event handlers
+    this.on('wm_walletStateChanged', this.handleWalletStateChanged);
+    this.on('wm_sessionTerminated', this.handleSessionTerminated);
   }
 
   /**
-   * Registers custom serializers for complex data types
-   * @internal
+   * Handles wallet state change events from the router.
+   * Updates the set of connected chains based on account availability.
+   * @param params - Event parameters containing chain ID and changes
    */
-  private registerSerializers() {
-    this.registerSerializer('aztec_registerContract', { params: registerContractSerializer });
-    this.registerSerializer('aztec_registerContractClass', { params: registerContractClassSerializer });
+  private handleWalletStateChanged(params: RouterEventMap['wm_walletStateChanged']): void {
+    const { chainId, changes } = params;
+    const aztecChainId = chainId as AztecChainId;
+
+    // Only handle events for requested chains
+    if (this.requestedChains.has(aztecChainId)) {
+      if (changes.accounts && changes.accounts.length > 0) {
+        this.connectedChains.add(aztecChainId);
+        console.log('Chain connected:', aztecChainId);
+      } else {
+        this.connectedChains.delete(aztecChainId);
+        console.log('Chain disconnected:', aztecChainId);
+      }
+      console.log('Connected chains:', Array.from(this.connectedChains));
+    }
   }
 
   /**
-   * Connects to the Aztec network.
-   * @returns True if connection successful
+   * Handles session termination events from the router.
+   * Cleans up session state and connected chains.
+   * @param params - Event parameters containing session ID
    */
-  async connect(): Promise<boolean> {
-    return this.callMethod('aztec_connect');
+  private handleSessionTerminated(params: RouterEventMap['wm_sessionTerminated']): void {
+    const { sessionId } = params;
+    if (sessionId === this.sessionId) {
+      this.sessionId = undefined;
+      this.connectedChains.clear();
+      this.requestedChains.clear();
+      console.log('Session terminated, all chains cleared');
+    }
   }
 
   /**
-   * Retrieves the account address from the wallet.
-   * @returns The account address as a string
+   * Connects to one or more Aztec chains.
+   * Requests permissions for basic operations on each chain.
+   * @param chains - Array of chain IDs to connect to
+   * @returns Session ID for the connection
+   * @throws {AztecWalletRPCError} If connection fails or response is invalid
    */
-  async getAccount(): Promise<string> {
-    return this.callMethod('aztec_getAccount');
+  public async connect(chains: AztecChainId[]): Promise<string> {
+    // Request connection with permissions for all chains
+    const permissions: Record<string, string[]> = {};
+    for (const chainId of chains) {
+      permissions[chainId] = [
+        'aztec_getAccount',
+        'aztec_sendTransaction',
+        'aztec_simulateTransaction',
+        'aztec_registerContract',
+        'aztec_registerContractClass',
+        'aztec_registerSender',
+      ];
+    }
+
+    const response = await this.callMethod('wm_connect', { permissions });
+    if (typeof response === 'object' && response !== null && 'sessionId' in response) {
+      this.sessionId = String(response.sessionId);
+      // Track requested chains for permission checks
+      this.requestedChains = new Set(chains);
+      return this.sessionId;
+    }
+    throw new AztecWalletRPCError('invalidResponse', 'Invalid connect response format');
   }
 
   /**
-   * Sends one or more transactions to the Aztec network.
-   * @param params - The transactions to send and optional authorization witnesses
-   * @returns The transaction hash as a string
+   * Disconnects from all chains and terminates the session.
+   * Cleans up all connection state.
    */
-  async sendTransaction(params: TransactionParams): Promise<string> {
-    return this.callMethod('aztec_sendTransaction', params);
+  public async disconnect(): Promise<void> {
+    if (!this.sessionId) return;
+
+    await this.callMethod('wm_disconnect', { sessionId: this.sessionId });
+    this.sessionId = undefined;
+    this.connectedChains.clear();
+    this.requestedChains.clear();
   }
 
   /**
-   * Simulates a transaction on the Aztec network.
-   * @param params - The transaction function call to simulate
-   * @returns The result of the transaction simulation
+   * Gets the list of currently connected chain IDs.
+   * @returns Array of connected chain IDs
    */
-  async simulateTransaction(params: TransactionFunctionCall): Promise<unknown> {
-    return this.callMethod('aztec_simulateTransaction', params);
+  public getSupportedChains(): AztecChainId[] {
+    return Array.from(this.connectedChains);
   }
 
   /**
-   * Registers a contact in the user's PXE.
-   * @param contact - The contact to register
-   * @returns True if registration successful
+   * Gets the account address for the specified chain.
+   * @param chainId - ID of the chain to query
+   * @returns Account address as a string
+   * @throws {AztecWalletRPCError} If chain not connected or response invalid
    */
-  async registerContact(contact: string): Promise<boolean> {
-    return this.callMethod('aztec_registerContact', { contact });
+  public async getAccount(chainId: AztecChainId): Promise<string> {
+    const result = await this.callWithContext('aztec_getAccount', chainId);
+    if (typeof result !== 'string') {
+      throw new AztecWalletRPCError('invalidResponse', 'Expected string account address');
+    }
+    return result;
   }
 
   /**
-   * Registers a contract in the user's PXE.
-   * @param contractAddress - The contract address
-   * @param contractInstance - The contract instance
-   * @param contractArtifact - Optional contract artifact
-   * @returns True if registration successful
+   * Sends a transaction to the specified chain.
+   * @param chainId - ID of the chain to send transaction to
+   * @param params - Transaction parameters including function calls and optional auth witnesses
+   * @returns Transaction hash
+   * @throws {AztecWalletRPCError} If transaction fails or response invalid
    */
-  async registerContract(
-    contractAddress: string,
-    contractInstance: ContractInstance,
-    contractArtifact?: ContractArtifact,
-  ): Promise<boolean> {
-    return this.callMethod('aztec_registerContract', {
-      contractAddress,
-      contractInstance,
-      contractArtifact,
-    });
+  public async sendTransaction(chainId: AztecChainId, params: Record<string, unknown>): Promise<string> {
+    const result = await this.callWithContext('aztec_sendTransaction', chainId, params);
+    if (typeof result !== 'string') {
+      throw new AztecWalletRPCError('invalidResponse', 'Expected string transaction hash');
+    }
+    return result;
   }
 
   /**
-   * Registers a contract class in the user's PXE.
-   * @param contractArtifact - The contract artifact
-   * @returns True if registration successful
+   * Simulates a transaction without submitting it.
+   * @param chainId - ID of the chain to simulate on
+   * @param params - Transaction parameters to simulate
+   * @returns Simulation result
+   * @throws {AztecWalletRPCError} If simulation fails
    */
-  async registerContractClass(contractArtifact: ContractArtifact): Promise<boolean> {
-    return this.callMethod('aztec_registerContractClass', { contractArtifact });
+  public async simulateTransaction(chainId: AztecChainId, params: Record<string, unknown>): Promise<unknown> {
+    return this.callWithContext('aztec_simulateTransaction', chainId, params);
+  }
+
+  /**
+   * Registers a contract instance with the wallet.
+   * @param chainId - ID of the chain where contract is deployed
+   * @param params - Contract registration parameters
+   * @throws {AztecWalletRPCError} If registration fails
+   */
+  public async registerContract(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
+    await this.callWithContext('aztec_registerContract', chainId, params);
+  }
+
+  /**
+   * Registers a contract class with the wallet.
+   * @param chainId - ID of the chain to register on
+   * @param params - Contract class registration parameters
+   * @throws {AztecWalletRPCError} If registration fails
+   */
+  public async registerContractClass(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
+    await this.callWithContext('aztec_registerContractClass', chainId, params);
+  }
+
+  /**
+   * Registers a transaction sender with the wallet.
+   * @param chainId - ID of the chain to register on
+   * @param params - Sender registration parameters
+   * @throws {AztecWalletRPCError} If registration fails
+   */
+  public async registerSender(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
+    await this.callWithContext('aztec_registerSender', chainId, params);
+  }
+
+  /**
+   * Makes an RPC call with proper chain and session context.
+   * @param method - RPC method name
+   * @param chainId - Chain ID for context
+   * @param params - Optional method parameters
+   * @returns Method result
+   * @throws {AztecWalletRPCError} If not connected or chain not supported
+   */
+  private async callWithContext(
+    method: string,
+    chainId: AztecChainId,
+    params?: Record<string, unknown>,
+  ): Promise<unknown> {
+    if (!this.sessionId) {
+      throw new AztecWalletRPCError('notConnected');
+    }
+
+    if (!this.requestedChains.has(chainId)) {
+      throw new AztecWalletRPCError('chainNotSupported', chainId);
+    }
+
+    // Include context in params
+    const paramsWithContext = {
+      ...params,
+      sessionId: this.sessionId,
+      chainId,
+    };
+
+    return this.callMethod(method, paramsWithContext);
   }
 }

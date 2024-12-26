@@ -22,11 +22,11 @@
   "license": "Apache-2.0",
   "pnpm": {
     "overrides": {
-      "@aztec/aztec.js": "0.67.1",
-      "@aztec/accounts": "0.67.1",
-      "@aztec/foundation": "0.67.1",
-      "@aztec/noir-contracts.js": "0.67.1",
-      "@aztec/circuits.js": "0.67.1"
+      "@aztec/aztec.js": "0.68.2",
+      "@aztec/accounts": "0.68.2",
+      "@aztec/foundation": "0.68.2",
+      "@aztec/noir-contracts.js": "0.68.2",
+      "@aztec/circuits.js": "0.68.2"
     },
     "patchedDependencies": {
       "p-limit@3.1.0": "patches/p-limit@3.1.0.patch"
@@ -40,6 +40,8 @@
     "@lerna-lite/version": "^3.10.1",
     "@vitest/coverage-v8": "^2.1.8",
     "rimraf": "^6.0.1",
+    "typedoc": "^0.27.6",
+    "typedoc-plugin-markdown": "^4.4.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

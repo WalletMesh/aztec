@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist node_modules",
     "lint": "biome lint",
     "lint:fix": "biome lint --fix",
     "format": "biome format",
@@ -33,7 +33,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "@aztec/aztec.js": "0.67.1",
+    "@aztec/aztec.js": "0.68.2",
     "@walletmesh/aztec-rpc": "workspace:^"
   }
 }

@@ -1,6 +1,42 @@
-import type { ContractArtifact, PXE } from '@aztec/aztec.js';
-import type { ContractInstance } from '@aztec/circuits.js';
-import type { JSONRPCMiddleware } from '@walletmesh/jsonrpc';
+import type {
+  AuthWitness,
+  AztecAddress,
+  ContractArtifact,
+  ContractClassWithId,
+  ContractInstanceWithAddress,
+  ExtendedNote,
+  Fr,
+  PXE,
+  TxExecutionRequest,
+  TxHash,
+  TxReceipt,
+  L2Block,
+  LogFilter,
+  Point,
+  SiblingPath,
+  PartialAddress,
+  CompleteAddress,
+  NodeInfo,
+  AccountWallet,
+} from '@aztec/aztec.js';
+import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
+import type { AbiDecoded } from '@aztec/foundation/abi';
+import type {
+  InBlock,
+  IncomingNotesFilter,
+  EventMetadataDefinition,
+  PrivateExecutionResult,
+  TxEffect,
+  TxProvingResult,
+  UniqueNote,
+  GetUnencryptedLogsResponse,
+  PXEInfo,
+  TxSimulationResult,
+} from '@aztec/circuit-types';
+import type { GasFees, L1_TO_L2_MSG_TREE_HEIGHT } from '@aztec/circuits.js';
+import type { JSONRPCEventMap, JSONRPCMiddleware } from '@walletmesh/jsonrpc';
+import type { JSONRPCWalletClient, WalletMethodMap } from '@walletmesh/router';
+import type { ContractArtifactCache } from './contractArtifactCache.js';
 
 /**
  * Represents a single function call to a contract.
@@ -26,11 +62,21 @@ export type TransactionParams = {
   authwits?: string[];
 };
 
+export const BASE_WALLET_METHODS: (keyof AztecWalletBaseMethodMap)[] = [
+  'wm_getSupportedMethods',
+  'aztec_connect',
+  'aztec_getAccount',
+  'aztec_sendTransaction',
+  'aztec_simulateTransaction',
+] as const;
+
 /**
  * A mapping of JSON-RPC methods to their parameters and return types for Aztec Wallets.
+ *
+ * This extends the base WalletMethodMap with Aztec-specific methods.
  * @public
  */
-export type AztecWalletRPCMethodMap = {
+export interface AztecWalletBaseMethodMap extends WalletMethodMap {
   /**
    * Connects to the Aztec network.
    * @returns A boolean indicating if the connection was successful
@@ -64,41 +110,17 @@ export type AztecWalletRPCMethodMap = {
   };
 
   /**
-   * Registers a contact in the user's PXE
-   * @param params - The contact address to register
-   * @returns True if registration was successful
+   * Returns the list of supported methods for the wallet.
+   * @returns An array of supported methods
    */
-  aztec_registerContact: {
-    params: { contact: string };
-    result: boolean;
+  wm_getSupportedMethods: {
+    result: string[];
   };
+}
 
-  /**
-   * Registers a contract instance in the user's PXE.
-   * @param params - The contract details to register
-   * @returns True if registration was successful
-   */
-  aztec_registerContract: {
-    params: {
-      contractAddress: string;
-      contractInstance: ContractInstance;
-      contractArtifact?: ContractArtifact;
-    };
-    result: boolean;
-  };
-
-  /**
-   * Registers a contract class in the user's PXE.
-   * @param params - The contract artifact to register
-   * @returns True if registration was successful
-   */
-  aztec_registerContractClass: {
-    params: {
-      contractArtifact: ContractArtifact;
-    };
-    result: boolean;
-  };
-};
+export interface AztecWalletEventMap extends JSONRPCEventMap {
+  // TODO: What events do we need?
+}
 
 /**
  * Holds the context passed through RPC middleware.
@@ -107,10 +129,152 @@ export type AztecWalletRPCMethodMap = {
 export type AztecWalletContext = Record<string, unknown> & {
   /** The PXE instance for the wallet */
   pxe: PXE;
+  wallet: AccountWallet;
+  contractArtifactCache: ContractArtifactCache;
 };
 
 /**
  * Type for Aztec wallet RPC middleware.
  * @public
  */
-export type AztecWalletRPCMiddleware = JSONRPCMiddleware<AztecWalletRPCMethodMap, AztecWalletContext>;
+export type AztecWalletMiddleware = JSONRPCMiddleware<AztecWalletBaseMethodMap, AztecWalletContext>;
+
+export type AztecWalletRouterClient = JSONRPCWalletClient<AztecWalletBaseMethodMap>;
+
+/**
+ * Type for Aztec wallet RPC method map.
+ * This extends the AztecWalletBaseMethodMap with the methods used in by Aztec's `AccountWallet`
+ */
+export interface AztecWalletMethodMap extends AztecWalletBaseMethodMap {
+  /* Chain */
+  aztec_getBlock: { params: { number: number }; result: L2Block };
+  aztec_getBlockNumber: { result: number };
+  aztec_getChainId: { result: number };
+  aztec_getVersion: { result: number };
+  aztec_getNodeInfo: { result: NodeInfo };
+  aztec_getProvenBlockNumber: { result: number };
+  aztec_getPXEInfo: { result: PXEInfo };
+  aztec_getCurrentBaseFees: { result: GasFees };
+
+  /* Scopes */
+  aztec_setScopes: { params: { scopes: AztecAddress[] }; result: boolean };
+  aztec_getScopes: { result: AztecAddress[] };
+
+  /* L1->L2 Messages */
+  aztec_isL1ToL2MessageSynced: { params: { l1ToL2Message: Fr }; result: boolean };
+  aztec_getL1ToL2MembershipWitness: {
+    params: { contractAddress: AztecAddress; messageHash: Fr; secret: Fr };
+    result: [bigint, SiblingPath<typeof L1_TO_L2_MSG_TREE_HEIGHT>];
+  };
+
+  /* Capsules */
+  aztec_addCapsule: { params: { capsule: Fr[] }; result: boolean };
+
+  /* Accounts */
+  aztec_getAddress: { result: AztecAddress };
+  aztec_getCompleteAddress: { result: CompleteAddress };
+  aztec_registerAccount: {
+    params: { secretKey: Fr; partialAddress: PartialAddress };
+    result: CompleteAddress;
+  };
+  aztec_getRegisteredAccounts: { result: CompleteAddress[] };
+
+  /* AuthWitness */
+  aztec_addAuthWitness: { params: { authWitness: AuthWitness }; result: boolean };
+  aztec_getAuthWitness: { params: { messageHash: Fr }; result: Fr[] };
+  aztec_createAuthWit: { params: { intent: Fr }; result: AuthWitness };
+
+  /* Senders */
+
+  /**
+   * Registers a contact in the user's PXE
+   * @param params - The sender (contact) address to register
+   * @returns True if registration was successful
+   */
+  aztec_registerSender: { params: { sender: AztecAddress }; result: AztecAddress };
+  aztec_getSenders: { result: AztecAddress[] };
+  aztec_removeSender: { params: { sender: AztecAddress }; result: boolean };
+
+  /* Contracts */
+
+  aztec_getContracts: { result: AztecAddress[] };
+  aztec_getContractInstance: { params: { address: AztecAddress }; result: ContractInstanceWithAddress };
+  aztec_getContractClass: { params: { id: Fr }; result: ContractClassWithId };
+  aztec_getContractArtifact: { params: { id: Fr }; result: ContractArtifact };
+  aztec_isContractClassPubliclyRegistered: { params: { id: Fr }; result: boolean };
+  aztec_isContractPubliclyDeployed: { params: { address: AztecAddress }; result: boolean };
+  aztec_isContractInitialized: { params: { address: AztecAddress }; result: boolean };
+
+  /**
+   * Registers a contract instance in the user's PXE.
+   * @param params - The contract details to register
+   * @returns True if registration was successful
+   */
+  aztec_registerContract: {
+    params: { instance: ContractInstanceWithAddress; artifact?: ContractArtifact };
+    result: boolean;
+  };
+
+  /**
+   * Registers a contract class in the user's PXE.
+   * @param params - The contract artifact to register
+   * @returns True if registration was successful
+   */
+  aztec_registerContractClass: { params: { artifact: ContractArtifact }; result: boolean };
+  // biome-ignore lint/suspicious/noExplicitAny: return type from aztec.js is `any`
+  aztec_getPublicStorageAt: { params: { contract: AztecAddress; storageSlot: Fr }; result: any };
+
+  /* Transactions */
+  aztec_createTxExecutionRequest: { params: { exec: ExecutionRequestInit }; result: TxExecutionRequest };
+  aztec_proveTx: {
+    params: { txRequest: TxExecutionRequest; privateExecutionResult: PrivateExecutionResult };
+    result: TxProvingResult;
+  };
+  aztec_getTxEffect: { params: { txHash: TxHash }; result: InBlock<TxEffect> };
+  aztec_getTxReceipt: { params: { txHash: TxHash }; result: TxReceipt };
+
+  aztec_simulateTx: {
+    params: {
+      txRequest: TxExecutionRequest;
+      simulatePublic: boolean;
+      msgSender?: AztecAddress;
+      skipTxValidation?: boolean;
+      enforceFeePayment?: boolean;
+      profile?: boolean;
+    };
+    result: TxSimulationResult;
+  };
+  aztec_simulateUnconstrained: {
+    params: { functionName: string; args: unknown[]; to: AztecAddress; from?: AztecAddress };
+    result: AbiDecoded;
+  };
+
+  /* Notes */
+  aztec_getIncomingNotes: { params: { filter: IncomingNotesFilter }; result: UniqueNote[] };
+  aztec_addNote: { params: { note: ExtendedNote }; result: boolean };
+  aztec_addNullifiedNote: { params: { note: ExtendedNote }; result: boolean };
+
+  /* Logs */
+  aztec_getUnencryptedLogs: { params: { filter: LogFilter }; result: GetUnencryptedLogsResponse };
+  aztec_getContractClassLogs: { params: { filter: LogFilter }; result: GetUnencryptedLogsResponse };
+  aztec_getEncryptedEvents: {
+    params: { event: EventMetadataDefinition; from: number; limit: number; vpks?: Point[] };
+    result: unknown[];
+  };
+  aztec_getUnencryptedEvents: {
+    params: { event: EventMetadataDefinition; from: number; limit: number };
+    result: unknown[];
+  };
+}
+
+export type AztecWalletMethodHandler<
+  T extends AztecWalletMethodMap,
+  M extends keyof T,
+  C extends AztecWalletContext,
+> = (
+  context: C,
+  params: T[M]['params'],
+  accountWallet: AccountWallet,
+) => Promise<T[M]['result']> | T[M]['result'];
+
+export type AztecChainId = `aztec:${string}`;

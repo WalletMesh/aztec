@@ -15,7 +15,7 @@
   "homepage": "https://github.com/WalletMesh/aztec/tree/main/packages/rpc#readme",
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
-    "clean": "rimraf dist",
+    "clean": "rimraf dist node_modules",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
@@ -34,8 +34,9 @@
     "typedoc-plugin-markdown": "^4.3.1"
   },
   "dependencies": {
-    "@aztec/aztec.js": "0.67.1",
-    "@aztec/foundation": "0.67.1",
-    "@walletmesh/jsonrpc": "^0.0.4"
+    "@aztec/aztec.js": "0.68.2",
+    "@aztec/foundation": "0.68.2",
+    "@walletmesh/jsonrpc": "0.2.0",
+    "@walletmesh/router": "0.2.0"
   }
 }

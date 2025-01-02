@@ -1,8 +1,9 @@
 import { JSONRPCNode } from '@walletmesh/jsonrpc';
 import type { Transport } from '@walletmesh/jsonrpc';
-import type { RouterMethodMap, RouterEventMap } from '@walletmesh/router';
+import type { RouterMethodMap, RouterEventMap, MethodCall } from '@walletmesh/router';
 import { AztecWalletRPCError } from './errors.js';
-import type { AztecChainId } from './types.js';
+import type { AztecChainId, AztecWalletMethodMap, TransactionParams } from './types.js';
+import { AztecOperationBuilder } from './operation.js';
 
 /**
  * Provider for interacting with multiple Aztec chains through WalletMesh router.
@@ -22,19 +23,63 @@ import type { AztecChainId } from './types.js';
  * // Connect to chains
  * await provider.connect(['aztec:testnet', 'aztec:devnet']);
  *
- * // Get account address
+ * // Single operation using convenience method
  * const address = await provider.getAccount('aztec:testnet');
  *
- * // Send transaction
- * const txHash = await provider.sendTransaction('aztec:testnet', {
- *   functionCalls: [{
- *     contractAddress: "0x...",
- *     functionName: "transfer",
- *     args: [recipient, amount]
- *   }]
- * });
+ * // Single operation using chain builder
+ * const txHash = await provider.chain('aztec:testnet')
+ *   .call('aztec_sendTransaction', {
+ *     functionCalls: [{
+ *       contractAddress: "0x...",
+ *       functionName: "transfer",
+ *       args: [recipient, amount]
+ *     }]
+ *   })
+ *   .execute();
+ *
+ * // Multiple operations in one call
+ * const [account, contracts, blockNumber] = await provider
+ *   .chain('aztec:testnet')
+ *   .call('aztec_getAccount')
+ *   .call('aztec_getContracts')
+ *   .call('aztec_getBlockNumber')
+ *   .execute();
  * ```
  */
+/**
+ * Default permissions requested when connecting to chains
+ */
+const DEFAULT_PERMISSIONS = [
+  // Basic operations
+  'aztec_connect',
+  'aztec_getAccount',
+  'aztec_getAddress',
+
+  // Transaction operations
+  'aztec_sendTransaction',
+  'aztec_simulateTransaction',
+  'aztec_getTxReceipt',
+  'aztec_getTxEffect',
+
+  // Contract operations
+  'aztec_registerContract',
+  'aztec_registerContractClass',
+  'aztec_getContracts',
+  'aztec_getContractInstance',
+  'aztec_getContractClass',
+
+  // Chain info
+  'aztec_getBlockNumber',
+  'aztec_getChainId',
+  'aztec_getNodeInfo',
+  'aztec_getCurrentBaseFees',
+
+  // Notes and events
+  'aztec_getIncomingNotes',
+  'aztec_getUnencryptedLogs',
+  'aztec_getEncryptedEvents',
+] as const;
+
 export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMap> {
   private sessionId?: string;
   private connectedChains: Set<AztecChainId>;
@@ -52,6 +97,82 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
     // Register event handlers
     this.on('wm_walletStateChanged', this.handleWalletStateChanged);
     this.on('wm_sessionTerminated', this.handleSessionTerminated);
+  }
+
+  /**
+   * Creates a new operation builder for chaining method calls
+   * @param chainId - The chain to execute operations on
+   * @returns A new operation builder instance
+   */
+  public chain(chainId: AztecChainId): AztecOperationBuilder {
+    return new AztecOperationBuilder(chainId, this);
+  }
+
+  /**
+   * Execute a single method call via wm_call
+   * @param chainId - The chain to execute on
+   * @param method - The method to call
+   * @param params - Optional method parameters
+   * @returns The method result
+   * @throws {AztecWalletRPCError} If not connected or chain not supported
+   */
+  public async executeCall<M extends keyof AztecWalletMethodMap>(
+    chainId: AztecChainId,
+    method: M,
+    params?: AztecWalletMethodMap[M]['params'],
+  ): Promise<AztecWalletMethodMap[M]['result']> {
+    if (!this.sessionId) {
+      throw new AztecWalletRPCError('notConnected');
+    }
+
+    if (!this.requestedChains.has(chainId)) {
+      throw new AztecWalletRPCError('chainNotSupported', chainId);
+    }
+
+    const result = await this.callMethod('wm_call', {
+      chainId,
+      sessionId: this.sessionId,
+      call: {
+        method: String(method),
+        params,
+      },
+    });
+
+    return result as AztecWalletMethodMap[M]['result'];
+  }
+
+  /**
+   * Execute multiple method calls via wm_bulkCall
+   * @param chainId - The chain to execute on
+   * @param calls - Array of method calls to execute
+   * @returns Array of results in the same order as the calls
+   * @throws {AztecWalletRPCError} If not connected or chain not supported
+   */
+  public async executeBulkCall(
+    chainId: AztecChainId,
+    calls: Array<{
+      method: keyof AztecWalletMethodMap;
+      params?: unknown;
+    }>,
+  ): Promise<unknown[]> {
+    if (!this.sessionId) {
+      throw new AztecWalletRPCError('notConnected');
+    }
+
+    if (!this.requestedChains.has(chainId)) {
+      throw new AztecWalletRPCError('chainNotSupported', chainId);
+    }
+
+    const results = await this.callMethod('wm_bulkCall', {
+      chainId,
+      sessionId: this.sessionId,
+      calls: calls.map(({ method, params }) => ({
+        method: String(method),
+        params,
+      })),
+    });
+
+    return results as unknown[];
   }
 
   /**
@@ -102,24 +223,17 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
     // Request connection with permissions for all chains
     const permissions: Record<string, string[]> = {};
     for (const chainId of chains) {
-      permissions[chainId] = [
-        'aztec_getAccount',
-        'aztec_sendTransaction',
-        'aztec_simulateTransaction',
-        'aztec_registerContract',
-        'aztec_registerContractClass',
-        'aztec_registerSender',
-      ];
+      permissions[chainId] = [...DEFAULT_PERMISSIONS];
     }
 
     const response = await this.callMethod('wm_connect', { permissions });
-    if (typeof response === 'object' && response !== null && 'sessionId' in response) {
-      this.sessionId = String(response.sessionId);
-      // Track requested chains for permission checks
-      this.requestedChains = new Set(chains);
-      return this.sessionId;
+    if (!response || typeof response !== 'object' || !('sessionId' in response)) {
+      throw new AztecWalletRPCError('invalidResponse', 'Invalid connect response format');
     }
-    throw new AztecWalletRPCError('invalidResponse', 'Invalid connect response format');
+
+    this.sessionId = String(response.sessionId);
+    this.requestedChains = new Set(chains);
+    return this.sessionId;
   }
 
   /**
@@ -150,11 +264,7 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @throws {AztecWalletRPCError} If chain not connected or response invalid
    */
   public async getAccount(chainId: AztecChainId): Promise<string> {
-    const result = await this.callWithContext('aztec_getAccount', chainId);
-    if (typeof result !== 'string') {
-      throw new AztecWalletRPCError('invalidResponse', 'Expected string account address');
-    }
-    return result;
+    return this.chain(chainId).call('aztec_getAccount').execute();
   }
 
   /**
@@ -164,12 +274,8 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @returns Transaction hash
    * @throws {AztecWalletRPCError} If transaction fails or response invalid
    */
-  public async sendTransaction(chainId: AztecChainId, params: Record<string, unknown>): Promise<string> {
-    const result = await this.callWithContext('aztec_sendTransaction', chainId, params);
-    if (typeof result !== 'string') {
-      throw new AztecWalletRPCError('invalidResponse', 'Expected string transaction hash');
-    }
-    return result;
+  public async sendTransaction(chainId: AztecChainId, params: TransactionParams): Promise<string> {
+    return this.chain(chainId).call('aztec_sendTransaction', params).execute();
   }
 
   /**
@@ -179,8 +285,11 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @returns Simulation result
    * @throws {AztecWalletRPCError} If simulation fails
    */
-  public async simulateTransaction(chainId: AztecChainId, params: Record<string, unknown>): Promise<unknown> {
-    return this.callWithContext('aztec_simulateTransaction', chainId, params);
+  public async simulateTransaction(
+    chainId: AztecChainId,
+    params: TransactionParams['functionCalls'][0],
+  ): Promise<unknown> {
+    return this.chain(chainId).call('aztec_simulateTransaction', params).execute();
   }
 
   /**
@@ -189,8 +298,11 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @param params - Contract registration parameters
    * @throws {AztecWalletRPCError} If registration fails
    */
-  public async registerContract(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
-    await this.callWithContext('aztec_registerContract', chainId, params);
+  public async registerContract(
+    chainId: AztecChainId,
+    params: AztecWalletMethodMap['aztec_registerContract']['params'],
+  ): Promise<void> {
+    await this.chain(chainId).call('aztec_registerContract', params).execute();
   }
 
   /**
@@ -199,8 +311,11 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @param params - Contract class registration parameters
    * @throws {AztecWalletRPCError} If registration fails
    */
-  public async registerContractClass(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
-    await this.callWithContext('aztec_registerContractClass', chainId, params);
+  public async registerContractClass(
+    chainId: AztecChainId,
+    params: AztecWalletMethodMap['aztec_registerContractClass']['params'],
+  ): Promise<void> {
+    await this.chain(chainId).call('aztec_registerContractClass', params).execute();
   }
 
   /**
@@ -209,38 +324,10 @@ export class AztecProviderRPC extends JSONRPCNode<RouterMethodMap, RouterEventMa
    * @param params - Sender registration parameters
    * @throws {AztecWalletRPCError} If registration fails
    */
-  public async registerSender(chainId: AztecChainId, params: Record<string, unknown>): Promise<void> {
-    await this.callWithContext('aztec_registerSender', chainId, params);
-  }
-
-  /**
-   * Makes an RPC call with proper chain and session context.
-   * @param method - RPC method name
-   * @param chainId - Chain ID for context
-   * @param params - Optional method parameters
-   * @returns Method result
-   * @throws {AztecWalletRPCError} If not connected or chain not supported
-   */
-  private async callWithContext(
-    method: string,
+  public async registerSender(
     chainId: AztecChainId,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    if (!this.sessionId) {
-      throw new AztecWalletRPCError('notConnected');
-    }
-
-    if (!this.requestedChains.has(chainId)) {
-      throw new AztecWalletRPCError('chainNotSupported', chainId);
-    }
-
-    // Include context in params
-    const paramsWithContext = {
-      ...params,
-      sessionId: this.sessionId,
-      chainId,
-    };
-
-    return this.callMethod(method, paramsWithContext);
+    params: AztecWalletMethodMap['aztec_registerSender']['params'],
+  ): Promise<void> {
+    await this.chain(chainId).call('aztec_registerSender', params).execute();
   }
 }

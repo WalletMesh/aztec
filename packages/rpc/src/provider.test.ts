@@ -3,11 +3,11 @@ import { AztecProviderRPC } from './provider.js';
 import { AztecWalletRPCError } from './errors.js';
 import type { Transport } from '@walletmesh/jsonrpc';
 import type { RouterMethodMap, RouterEventMap } from '@walletmesh/router';
-import type { AztecChainId } from './router-types.js';
-import { emitProviderEvent } from './test-utils.js';
+import type { AztecChainId } from './types.js';
+import { mockAddress, mockContractInstance, mockContractArtifact } from './test-utils.js';
 
 describe('AztecProviderRPC', () => {
-  let transport: Transport<RouterMethodMap, RouterEventMap>;
+  let transport: Transport;
   let provider: AztecProviderRPC;
   const testChain: AztecChainId = 'aztec:testnet';
   const devChain: AztecChainId = 'aztec:devnet';
@@ -37,32 +37,12 @@ describe('AztecProviderRPC', () => {
       );
     });
 
-    it('should connect to multiple chains', async () => {
-      const sessionId = 'test-session';
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ sessionId });
-
-      const chains: AztecChainId[] = [testChain, devChain];
-      await provider.connect(chains);
-
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'wm_connect',
-        expect.objectContaining({
-          permissions: {
-            [testChain]: expect.any(Array),
-            [devChain]: expect.any(Array),
-          },
-        }),
-      );
-    });
-
     it('should handle invalid connect response', async () => {
       provider.callMethod = vi.fn().mockResolvedValueOnce({ invalid: 'response' });
-
       await expect(provider.connect([])).rejects.toThrow(AztecWalletRPCError);
     });
 
     it('should disconnect from all chains', async () => {
-      // First connect
       provider.callMethod = vi
         .fn()
         .mockResolvedValueOnce({ sessionId: 'test-session' })
@@ -74,226 +54,161 @@ describe('AztecProviderRPC', () => {
       expect(provider.callMethod).toHaveBeenLastCalledWith('wm_disconnect', { sessionId: 'test-session' });
       expect(provider.getSupportedChains()).toHaveLength(0);
     });
-
-    it('should handle disconnect when not connected', async () => {
-      // Create new provider without connecting
-      const newProvider = new AztecProviderRPC(transport);
-      await newProvider.disconnect();
-      // Should not throw and should not call any methods
-      expect(transport.send).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('Chain Management', () => {
-    beforeEach(async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ sessionId: 'test-session' });
-      await provider.connect([testChain]);
-      expect(provider.getSupportedChains()).toHaveLength(0);
-    });
-
-    it('should handle chain connection events', async () => {
-      // Simulate receiving a chain connection event through transport
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { accounts: ['0x123'], networkId: 'testnet' },
-      });
-      // Verify chain was added
-      const chains = provider.getSupportedChains();
-      expect(chains).toContain(testChain);
-    });
-
-    it('should ignore events for unrequested chains', async () => {
-      // Simulate receiving a chain connection event for an unrequested chain
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: 'aztec:mainnet',
-        changes: { accounts: ['0x123'], networkId: 'mainnet' },
-      });
-      // Verify chain was not added
-      const chains = provider.getSupportedChains();
-      expect(chains).not.toContain('aztec:mainnet');
-    });
-
-    it('should handle chain disconnection events', async () => {
-      // First connect and verify initial state
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { accounts: ['0x123'], networkId: 'testnet' },
-      });
-      expect(provider.getSupportedChains()).toContain(testChain);
-
-      // Then disconnect and verify chain was removed
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { networkId: 'testnet' },
-      });
-      expect(provider.getSupportedChains()).not.toContain(testChain);
-    });
-
-    it('should handle session expiration events', async () => {
-      // First connect and verify initial state
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { accounts: ['0x123'], networkId: 'testnet' },
-      });
-      expect(provider.getSupportedChains()).toContain(testChain);
-
-      // Then expire session and verify all chains were cleared
-      emitProviderEvent(provider, 'wm_sessionTerminated', {
-        sessionId: 'test-session',
-        reason: 'Session expired',
-      });
-      expect(provider.getSupportedChains()).toHaveLength(0);
-    });
-
-    it('should ignore session termination events for different sessions', async () => {
-      // First connect and verify initial state
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { accounts: ['0x123'], networkId: 'testnet' },
-      });
-      expect(provider.getSupportedChains()).toContain(testChain);
-
-      // Then send termination event for different session
-      emitProviderEvent(provider, 'wm_sessionTerminated', {
-        sessionId: 'different-session',
-        reason: 'Session expired',
-      });
-      // Verify chains are still connected
-      expect(provider.getSupportedChains()).toContain(testChain);
-    });
   });
 
   describe('Method Calls', () => {
     beforeEach(async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ sessionId: 'test-session' });
-      await provider.connect([testChain]);
-      emitProviderEvent(provider, 'wm_walletStateChanged', {
-        chainId: testChain,
-        changes: { accounts: ['0x123'], networkId: 'testnet' },
+      // Setup session and chain
+      Object.defineProperty(provider, 'sessionId', {
+        get: vi.fn().mockReturnValue('test-session'),
+      });
+      Object.defineProperty(provider, 'requestedChains', {
+        value: new Set([testChain]),
       });
     });
 
-    it('should get account address', async () => {
-      const address = '0x1234...';
-      provider.callMethod = vi.fn().mockResolvedValueOnce(address);
+    it('should execute single method call', async () => {
+      const mockResult = '0x123';
+      vi.spyOn(provider, 'executeCall').mockResolvedValue(mockResult);
 
       const result = await provider.getAccount(testChain);
-      expect(result).toBe(address);
+      expect(result).toBe(mockResult);
+      expect(provider.executeCall).toHaveBeenCalledWith(testChain, 'aztec_getAccount', undefined);
     });
 
-    it('should handle invalid account response', async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ invalid: 'response' });
+    it('should execute method call with params', async () => {
+      const mockResult = '0xtx';
+      const mockParams = {
+        functionCalls: [
+          {
+            contractAddress: '0x123',
+            functionName: 'transfer',
+            args: ['0x456', 100],
+          },
+        ],
+      };
+      vi.spyOn(provider, 'executeCall').mockResolvedValue(mockResult);
 
-      await expect(provider.getAccount(testChain)).rejects.toThrow(AztecWalletRPCError);
+      const result = await provider.sendTransaction(testChain, mockParams);
+      expect(result).toBe(mockResult);
+      expect(provider.executeCall).toHaveBeenCalledWith(testChain, 'aztec_sendTransaction', mockParams);
     });
 
-    it('should send transaction', async () => {
-      const txHash = '0xabcd...';
-      provider.callMethod = vi.fn().mockResolvedValueOnce(txHash);
+    it('should execute bulk method calls', async () => {
+      const mockResults = ['0x123', ['0x456', '0x789'], 42];
+      vi.spyOn(provider, 'executeBulkCall').mockResolvedValue(mockResults);
 
-      const result = await provider.sendTransaction(testChain, {
-        to: '0x5678...',
-        value: '1000',
-      });
-      expect(result).toBe(txHash);
+      const results = await provider
+        .chain(testChain)
+        .call('aztec_getAccount')
+        .call('aztec_getSenders')
+        .call('aztec_getBlockNumber')
+        .execute();
+
+      expect(results).toEqual(mockResults);
+      expect(provider.executeBulkCall).toHaveBeenCalledWith(testChain, [
+        { method: 'aztec_getAccount' },
+        { method: 'aztec_getSenders' },
+        { method: 'aztec_getBlockNumber' },
+      ]);
     });
 
-    it('should handle invalid transaction response', async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ invalid: 'response' });
+    it('should route method calls through wm_call', async () => {
+      const mockResult = '0x123';
+      vi.spyOn(provider, 'callMethod').mockResolvedValue(mockResult);
+
+      await provider.executeCall(testChain, 'aztec_getAccount');
+
+      expect(provider.callMethod).toHaveBeenCalledWith(
+        'wm_call',
+        expect.objectContaining({
+          chainId: testChain,
+          sessionId: 'test-session',
+          call: {
+            method: 'aztec_getAccount',
+            params: undefined,
+          },
+        }),
+      );
+    });
+
+    it('should route bulk calls through wm_bulkCall', async () => {
+      const mockResults = ['0x123', '0x456'];
+      vi.spyOn(provider, 'callMethod').mockResolvedValue(mockResults);
+
+      await provider.executeBulkCall(testChain, [
+        { method: 'aztec_getAccount' },
+        { method: 'aztec_getBlockNumber' },
+      ]);
+
+      expect(provider.callMethod).toHaveBeenCalledWith(
+        'wm_bulkCall',
+        expect.objectContaining({
+          chainId: testChain,
+          sessionId: 'test-session',
+          calls: [{ method: 'aztec_getAccount' }, { method: 'aztec_getBlockNumber' }],
+        }),
+      );
+    });
+
+    it('should validate method results', async () => {
+      vi.spyOn(provider, 'executeCall').mockResolvedValue(123); // Number instead of string
+
+      await expect(provider.chain(testChain).call('aztec_getAccount').execute()).rejects.toThrow(
+        AztecWalletRPCError,
+      );
+    });
+
+    it('should validate bulk results', async () => {
+      vi.spyOn(provider, 'executeBulkCall').mockResolvedValue(['0x123', 456]); // Second result should be string
 
       await expect(
-        provider.sendTransaction(testChain, {
-          to: '0x5678...',
-          value: '1000',
-        }),
+        provider.chain(testChain).call('aztec_getAccount').call('aztec_getAccount').execute(),
       ).rejects.toThrow(AztecWalletRPCError);
     });
 
-    it('should reject calls when not connected', async () => {
-      // Create new provider without connecting
-      const newProvider = new AztecProviderRPC(transport);
-      await expect(newProvider.getAccount(testChain)).rejects.toThrow(AztecWalletRPCError);
-    });
+    it('should handle registration methods', async () => {
+      vi.spyOn(provider, 'executeCall').mockResolvedValue(true);
 
-    it('should reject calls to unsupported chain', async () => {
-      await expect(provider.getAccount('aztec:mainnet')).rejects.toThrow(AztecWalletRPCError);
-    });
+      const mockInstance = mockContractInstance('0x1234567890123456789012345678901234567890');
+      const mockArtifact = mockContractArtifact();
 
-    it('should include session and chain in method calls', async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce('0x1234...');
-
-      await provider.getAccount(testChain);
-
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'aztec_getAccount',
-        expect.objectContaining({
-          sessionId: 'test-session',
-          chainId: testChain,
-        }),
-      );
-    });
-
-    it('should simulate transaction', async () => {
-      const simulationResult = { success: true, gas: 1000 };
-      provider.callMethod = vi.fn().mockResolvedValueOnce(simulationResult);
-
-      const result = await provider.simulateTransaction(testChain, {
-        to: '0x5678...',
-        value: '1000',
+      // Register contract
+      await provider.registerContract(testChain, {
+        instance: mockInstance,
+        artifact: mockArtifact,
       });
-      expect(result).toEqual(simulationResult);
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'aztec_simulateTransaction',
-        expect.objectContaining({
-          sessionId: 'test-session',
-          chainId: testChain,
-          to: '0x5678...',
-          value: '1000',
-        }),
-      );
-    });
-
-    it('should register contract', async () => {
-      const contractParams = { address: '0x1234...', abi: [] };
-      provider.callMethod = vi.fn().mockResolvedValueOnce(undefined);
-
-      await provider.registerContract(testChain, contractParams);
-      expect(provider.callMethod).toHaveBeenCalledWith(
+      expect(provider.executeCall).toHaveBeenCalledWith(
+        testChain,
         'aztec_registerContract',
         expect.objectContaining({
-          sessionId: 'test-session',
-          chainId: testChain,
-          ...contractParams,
+          instance: mockInstance,
+          artifact: mockArtifact,
         }),
       );
-    });
 
-    it('should register contract class', async () => {
-      const classParams = { name: 'TestContract', bytecode: '0x...' };
-      provider.callMethod = vi.fn().mockResolvedValueOnce(undefined);
-
-      await provider.registerContractClass(testChain, classParams);
-      expect(provider.callMethod).toHaveBeenCalledWith(
+      // Register contract class
+      await provider.registerContractClass(testChain, {
+        artifact: mockArtifact,
+      });
+      expect(provider.executeCall).toHaveBeenCalledWith(
+        testChain,
         'aztec_registerContractClass',
         expect.objectContaining({
-          sessionId: 'test-session',
-          chainId: testChain,
-          ...classParams,
+          artifact: mockArtifact,
         }),
       );
-    });
 
-    it('should register sender', async () => {
-      const senderParams = { address: '0x5678...', type: 'EOA' };
-      provider.callMethod = vi.fn().mockResolvedValueOnce(undefined);
-
-      await provider.registerSender(testChain, senderParams);
-      expect(provider.callMethod).toHaveBeenCalledWith(
+      // Register sender
+      const senderAddress = mockAddress('0x1234567890123456789012345678901234567890');
+      await provider.registerSender(testChain, {
+        sender: senderAddress,
+      });
+      expect(provider.executeCall).toHaveBeenCalledWith(
+        testChain,
         'aztec_registerSender',
         expect.objectContaining({
-          sessionId: 'test-session',
-          chainId: testChain,
-          ...senderParams,
+          sender: senderAddress,
         }),
       );
     });

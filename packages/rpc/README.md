@@ -1,32 +1,22 @@
 ## WalletMesh Aztec RPC Library
 
-[@walletmesh/aztec-rpc](https://github.com/WalletMesh/aztec/tree/main/packages/rpc) provides an implementation of
-RPC Provider & Wallet Service for [Aztec](https://aztec.network).
+[@walletmesh/aztec-rpc](https://github.com/WalletMesh/aztec/tree/main/packages/rpc) provides a type-safe RPC interface for interacting with [Aztec](https://aztec.network) wallets. It consists of two main components:
 
-It is built on top of the
-[@walletmesh/jsonrpc](https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme) and [@walletmesh/router](https://github.com/WalletMesh/wm-core/tree/main/packages/router#readme) libraries.
+- **AztecProviderRPC**: Client-side provider for dApps to communicate with Aztec wallets
+- **AztecChainWallet**: Server-side implementation that handles RPC requests using an Aztec wallet instance
+
+The library is built on [@walletmesh/jsonrpc](https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme) and [@walletmesh/router](https://github.com/WalletMesh/wm-core/tree/main/packages/router#readme).
 
 ## Features
 
 - Connect to multiple Aztec chains simultaneously
 - Flexible chain ID support (any string with 'aztec:' prefix)
-- Get account addresses per chain
-- Send and simulate transactions
-- Register contacts, contracts, and contract classes
-- Type-safe RPC interfaces (see `src/types.ts`)
-
-## Supported RPC Methods
-
-The following JSON-RPC methods are supported:
-
-* `aztec_getAccount`: Get the wallet's account address
-* `aztec_sendTransaction`: Send one or more transactions
-* `aztec_simulateTransaction`: Simulate a transaction without executing it
-* `aztec_registerContract`: Register a contract instance
-* `aztec_registerContractClass`: Register a contract class
-* `aztec_registerSender`: Register a transaction sender
-
-See src/types.ts for detailed type definitions and parameters.
+- Type-safe RPC interfaces
+- Efficient batching of multiple method calls
+- Fluent chaining API for bulk operations
+- Comprehensive error handling
+- Contract artifact caching
+- Event handling for wallet state changes
 
 ## Installation
 
@@ -34,155 +24,204 @@ See src/types.ts for detailed type definitions and parameters.
 npm install @walletmesh/aztec-rpc
 ```
 
-## Usage
+## Core RPC Methods
 
-### On the dApp (client) side
+The library supports a wide range of RPC methods:
 
-```js
+### Basic Operations
+- `aztec_connect`: Connect to Aztec chains
+- `aztec_getAccount`: Get wallet's account address
+- `aztec_getAddress`: Get wallet's Aztec address
+
+### Transaction Operations
+- `aztec_sendTransaction`: Send one or more transactions
+- `aztec_simulateTransaction`: Simulate transaction without executing
+- `aztec_getTxReceipt`: Get transaction receipt
+- `aztec_getTxEffect`: Get transaction effect
+
+### Contract Operations
+- `aztec_registerContract`: Register contract instance
+- `aztec_registerContractClass`: Register contract class
+- `aztec_getContracts`: Get registered contracts
+- `aztec_getContractInstance`: Get contract instance details
+- `aztec_getContractClass`: Get contract class details
+
+### Chain Information
+- `aztec_getBlockNumber`: Get current block number
+- `aztec_getChainId`: Get chain ID
+- `aztec_getNodeInfo`: Get node information
+- `aztec_getCurrentBaseFees`: Get current base fees
+
+### Notes and Events
+- `aztec_getIncomingNotes`: Get incoming notes
+- `aztec_getUnencryptedLogs`: Get unencrypted logs
+- `aztec_getEncryptedEvents`: Get encrypted events
+
+See [src/types.ts](https://github.com/WalletMesh/aztec/blob/main/packages/rpc/src/types.ts) for complete method definitions and parameters.
+
+## Usage Examples
+
+### Basic Provider Usage
+
+```typescript
 import { AztecProviderRPC } from '@walletmesh/aztec-rpc';
 
-// Create provider that sends requests via postMessage
-const provider = new AztecProviderRPC(request => {
-    window.postMessage(JSON.stringify(request), '*');
+// Create provider with transport
+const provider = new AztecProviderRPC(transport);
+
+// Connect to chains
+await provider.connect(['aztec:testnet', 'aztec:devnet']);
+
+// Get account address
+const address = await provider.getAccount('aztec:testnet');
+
+// Send transaction
+const txHash = await provider.sendTransaction('aztec:testnet', {
+  functionCalls: [{
+    contractAddress: "0x1234...",
+    functionName: "transfer",
+    args: [recipient, amount]
+  }]
 });
 
-// Handle responses from wallet
-window.addEventListener('message', event => {
-    const response = JSON.parse(event.data);
-    provider.receiveResponse(response);
+// Register contract
+await provider.registerContract('aztec:testnet', {
+  instance: contractInstance,
+  artifact: contractArtifact // optional if class already registered
 });
 
-// Example: Connect and interact with contracts on multiple chains
-async function interact() {
-    // Connect to multiple chains
-    await provider.connect(['aztec:testnet', 'aztec:devnet']);
+// Listen for chain connection events
+provider.on('chain:connected', ({ chainId }) => {
+  console.log(`Connected to chain: ${chainId}`);
+});
 
-    // Get list of supported chains
-    const chains = provider.getSupportedChains(); // ['aztec:testnet', 'aztec:devnet']
+// Listen for chain disconnection events
+provider.on('chain:disconnected', ({ chainId }) => {
+  console.log(`Disconnected from chain: ${chainId}`);
+});
+```
 
-    // Get user's account address on testnet
-    const testnetAccount = await provider.getAccount('aztec:testnet');
+### Chaining API for Bulk Operations
 
-    // Get user's account address on devnet
-    const devnetAccount = await provider.getAccount('aztec:devnet');
+The provider supports a fluent chaining API for executing multiple operations efficiently:
 
-    // Register a contract class on testnet
-    await provider.registerContractClass('aztec:testnet', contractArtifact);
+```typescript
+// Multiple reads in single batch
+const [account, contracts, blockNumber] = await provider
+  .chain('aztec:testnet')
+  .call('aztec_getAccount')
+  .call('aztec_getContracts')
+  .call('aztec_getBlockNumber')
+  .execute();
 
-    // Register a contract instance on testnet
-    await provider.registerContract('aztec:testnet', {
-        address: "0x5678...",
-        instance: contractInstance,
-        artifact: contractArtifact // optional if class already registered
-    });
+// Contract setup and interaction
+const [classId, instanceId, txHash] = await provider
+  .chain('aztec:testnet')
+  .call('aztec_registerContractClass', { artifact: contractArtifact })
+  .call('aztec_registerContract', { 
+    instance: contractInstance,
+    artifact: contractArtifact
+  })
+  .call('aztec_sendTransaction', {
+    functionCalls: [{
+      contractAddress: contractInstance.address,
+      functionName: 'initialize',
+      args: [param1, param2]
+    }]
+  })
+  .execute();
 
-    // Simulate a transaction on testnet
-    const result = await provider.simulateTransaction('aztec:testnet', {
-        contractAddress: "0x5678...",
-        functionName: "transfer",
-        args: [recipient, amount]
-    });
+// Multi-chain operations
+const [testnetData, devnetData] = await Promise.all([
+  provider
+    .chain('aztec:testnet')
+    .call('aztec_getAccount')
+    .call('aztec_getContracts')
+    .execute(),
+  provider
+    .chain('aztec:devnet')
+    .call('aztec_getAccount')
+    .call('aztec_getContracts')
+    .execute()
+]);
+```
 
-    // Send a single transaction on testnet
-    const txHash = await provider.sendTransaction('aztec:testnet', {
-        functionCalls: [{
-            contractAddress: "0x5678...",
-            functionName: "transfer",
-            args: [recipient, amount]
-        }]
-    });
+### Error Handling
 
-    // Send multiple transactions with auth witnesses on devnet
-    const txHash2 = await provider.sendTransaction('aztec:devnet', {
-        functionCalls: [
-            {
-                contractAddress: "0x5678...",
-                functionName: "transfer",
-                args: [recipientA, amountA]
-            },
-            {
-                contractAddress: "0x9012...",
-                functionName: "mint",
-                args: [recipientB, amountB]
-            }
-        ],
-        authwits: ["0xabcd..."]  // Optional authorization witnesses
-    });
+The library provides comprehensive error handling through `AztecWalletRPCError`:
 
-    // Listen for chain connection events
-    provider.on('chain:connected', ({ chainId }) => {
-        console.log(`Connected to chain: ${chainId}`);
-    });
-
-    // Listen for chain disconnection events
-    provider.on('chain:disconnected', ({ chainId }) => {
-        console.log(`Disconnected from chain: ${chainId}`);
-    });
-
-    // Listen for session expiration
-    provider.on('session:expired', () => {
-        console.log('Session expired');
-    });
+```typescript
+try {
+  await provider.sendTransaction('aztec:testnet', {
+    functionCalls: [{
+      contractAddress: "0x1234...",
+      functionName: "transfer",
+      args: [recipient, amount]
+    }]
+  });
+} catch (error) {
+  if (error instanceof AztecWalletRPCError) {
+    switch (error.code) {
+      case -32001: // User refused
+        console.log('Transaction rejected by user');
+        break;
+      case -32002: // Wallet not connected
+        console.log('Please connect wallet first');
+        break;
+      default:
+        console.error('RPC error:', error.message);
+    }
+  }
 }
 ```
 
-### On the wallet (server) side
-```js
-import { AztecWalletRouter } from '@walletmesh/aztec-rpc';
-import type { Wallet } from '@aztec/aztec.js';
+### Implementing a Wallet
 
-// Create chain clients
-const chains = new Map([
-    ['aztec:testnet', {
-        chainId: 'aztec:testnet',
-        rpc: new AztecWalletRPC(testnetWallet)
-    }],
-    ['aztec:devnet', {
-        chainId: 'aztec:devnet',
-        rpc: new AztecWalletRPC(devnetWallet)
-    }]
-]);
+Server-side implementation using `AztecChainWallet`:
 
-// Initialize router with chain clients
-const router = new AztecWalletRouter(
-    {
-        send: message => {
-            window.postMessage(JSON.stringify(message), '*');
-        }
-    },
-    chains,
-    {
-        // Optional configuration
-        permissions: {
-            // Custom permission rules
-            rules: [
-                async (chainId, method, context) => {
-                    // Return true to allow, false to deny
-                    return true;
-                }
-            ],
-            // Modify context before permission checks
-            contextModifier: async (context) => {
-                // Add custom data to context
-                return context;
-            }
-        },
-        // Session configuration
-        session: {
-            timeout: 3600000, // 1 hour
-            persistent: false
-        }
-    }
+```typescript
+import { AztecChainWallet } from '@walletmesh/aztec-rpc';
+import type { PXE, AccountWallet } from '@aztec/aztec.js';
+
+// Create wallet instance
+const wallet = new AztecChainWallet(
+  pxe,           // PXE instance
+  accountWallet, // Aztec AccountWallet instance
+  transport     // Transport layer
 );
 
 // Handle incoming requests
-window.addEventListener('message', event => {
-    const request = JSON.parse(event.data);
-    router.receiveRequest(request);
+transport.on('message', async (request) => {
+  const response = await wallet.handleRequest(request);
+  // Send response back to dApp
 });
+
+// Use with WalletMesh router
+const routerClient = wallet.asWalletRouterClient();
 ```
 
-## Example
+## Error Codes
 
-See [example](https://github.com/WalletMesh/aztec/tree/main/packages/example)
-for a complete example of how to use this library.
+Common error codes returned by the library:
+
+- -32000: Unknown internal error
+- -32001: User refused transaction
+- -32002: Wallet not connected
+- -32003: Contract instance not registered
+- -32004: Contract class not registered
+- -32005: Sender not registered
+- -32006: Invalid response format
+- -32007: Not connected to any chain
+- -32008: Chain not supported
+- -32009: Invalid request format
+- -32010: Invalid parameters
+- -32011: Permission denied
+- -32012: Session not found
+- -32013: Session expired
+- -32014: Transaction not found
+- -32015: Block not found
+- -32016: Authorization witness not found
+
+## Example Project
+
+See the [example project](https://github.com/WalletMesh/aztec/tree/main/packages/example) for a complete implementation using this library.

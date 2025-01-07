@@ -6,10 +6,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    "./rpc": {
-      "import": "./dist/rpc.js",
-      "require": "./dist/rpc.js",
-      "types": "./dist/rpc.d.ts"
+    "./rpc-wallet": {
+      "import": "./dist/aztec-rpc-wallet.js",
+      "require": "./dist/aztec-rpc-wallet.js",
+      "types": "./dist/aztec-rpc-wallet.d.ts"
     },
     "./helpers": {
       "import": "./dist/helpers.js",
@@ -34,6 +34,6 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@aztec/aztec.js": "0.68.2",
-    "@walletmesh/aztec-rpc": "workspace:^"
+    "@walletmesh/aztec-rpc-wallet": "workspace:^"
   }
 }

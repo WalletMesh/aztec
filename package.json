@@ -11,6 +11,8 @@
     "clean": "pnpm run -r clean",
     "test": "pnpm run -r test",
     "coverage": "pnpm run -r coverage",
+    "version": "changeset version && pnpm install --no-frozen-lockfile && pnpm run --filter \"[HEAD]\" docs",
+    "publish": "changeset publish",
     "lint": "biome lint",
     "lint:fix": "biome lint --fix",
     "format": "biome format",
@@ -26,7 +28,8 @@
       "@aztec/accounts": "0.68.2",
       "@aztec/foundation": "0.68.2",
       "@aztec/noir-contracts.js": "0.68.2",
-      "@aztec/circuits.js": "0.68.2"
+      "@aztec/circuits.js": "0.68.2",
+      "@aztec/circuit-types": "0.68.2"
     },
     "patchedDependencies": {
       "p-limit@3.1.0": "patches/p-limit@3.1.0.patch"
@@ -34,10 +37,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
-    "@lerna-lite/cli": "^3.10.1",
-    "@lerna-lite/publish": "^3.10.1",
-    "@lerna-lite/run": "^3.10.1",
-    "@lerna-lite/version": "^3.10.1",
+    "@changesets/cli": "^2.27.11",
     "@vitest/coverage-v8": "^2.1.8",
     "rimraf": "^6.0.1",
     "typedoc": "^0.27.6",

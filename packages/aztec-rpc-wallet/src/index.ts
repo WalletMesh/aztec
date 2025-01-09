@@ -12,16 +12,23 @@
 export { AztecProvider } from './provider.js';
 
 /**
- * Operation builder for chaining RPC method calls
- * @see AztecOperationBuilder
+ * Minimal provider for direct interaction with an Aztec chain wallet
+ * @see AztecChainProvider
  */
-export { AztecOperationBuilder } from './operation.js';
+export { AztecChainProvider } from './chainProvider.js';
 
 /**
  * Wallet implementation that handles RPC requests from dApps
- * @see AztecWallet
+ * @see AztecChainWallet
  */
-export { AztecChainWallet as AztecWallet } from './wallet.js';
+export { AztecChainWallet } from './wallet.js';
+export { AztecChainWalletMiddleware } from './types.js';
+
+/**
+ * Cache for contract artifacts
+ * @see ContractArtifactCache
+ */
+export { ContractArtifactCache } from './contractArtifactCache.js';
 
 /**
  * Error handling utilities for RPC communication
@@ -40,10 +47,16 @@ export type {
   AztecWalletContext,
   /** Event map for wallet events */
   AztecWalletEventMap,
+  /** Base method map for core wallet functionality */
+  AztecWalletBaseMethodMap,
   /** Complete method map including all Aztec methods */
   AztecWalletMethodMap,
   /** Middleware type for processing RPC requests */
   AztecWalletMiddleware,
+  /** Router client type for wallet mesh integration */
+  AztecWalletRouterClient,
+  /** Handler type for wallet methods */
+  AztecWalletMethodHandler,
   /** Type for contract function calls */
   TransactionFunctionCall,
   /** Parameters for transaction requests */

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { Fr } from '@aztec/aztec.js';
+import { Fr, getContractClassFromArtifact } from '@aztec/aztec.js';
 import type {
   AztecAddress,
   TxExecutionRequest,
@@ -30,6 +30,8 @@ import type {
   IncomingNotesFilter,
   UniqueNote,
 } from '@aztec/circuit-types';
+import { randomDeployedContract } from '@aztec/circuit-types';
+
 import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
 import type { GasFees } from '@aztec/circuits.js';
 import { AztecRemoteWallet, createAztecRPCWallet } from './aztecRemoteWallet.js';
@@ -165,6 +167,7 @@ describe('AztecRemoteWallet', () => {
 
     it('adds capsule', async () => {
       const mockCapsule = [Fr.fromString('1')];
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
       await wallet.addCapsule(mockCapsule);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_addCapsule', { capsule: mockCapsule });
     });
@@ -194,65 +197,56 @@ describe('AztecRemoteWallet', () => {
   });
 
   describe('contract operations', () => {
-    const mockContractAddress = { toString: () => '0x5678' } as unknown as AztecAddress;
-    const mockContractId = Fr.fromString('2');
-    const mockContractInstance = { address: mockContractAddress } as ContractInstanceWithAddress;
-    const mockContractClass = { id: mockContractId } as ContractClassWithId;
-    const mockContractArtifact = {
-      bytecode: '0x...',
-      name: 'TestContract',
-      functions: {},
-      outputs: {},
-      storageLayout: {},
-      events: {},
-      constructorArgs: [],
-      notes: {},
-      fileMap: {},
-    } as unknown as ContractArtifact;
+    const { instance, artifact } = randomDeployedContract();
+    const contractClass = getContractClassFromArtifact(artifact);
 
     it('gets contract instance', async () => {
-      mockChainBuilder.execute.mockResolvedValueOnce(mockContractInstance);
+      mockChainBuilder.execute.mockResolvedValueOnce(instance);
 
-      const result = await wallet.getContractInstance(mockContractAddress);
-      expect(result).toBe(mockContractInstance);
+      const result = await wallet.getContractInstance(instance.address);
+      expect(result).toBe(instance);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractInstance', {
-        address: mockContractAddress,
+        address: instance.address,
       });
     });
 
     it('gets contract class', async () => {
-      mockChainBuilder.execute.mockResolvedValueOnce(mockContractClass);
+      mockChainBuilder.execute.mockResolvedValueOnce(contractClass);
 
-      const result = await wallet.getContractClass(mockContractId);
-      expect(result).toBe(mockContractClass);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractClass', { id: mockContractId });
+      const result = await wallet.getContractClass(contractClass.id);
+      expect(result).toBe(contractClass);
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractClass', { id: contractClass.id });
     });
 
     it('gets contract artifact', async () => {
-      mockChainBuilder.execute.mockResolvedValueOnce(mockContractArtifact);
+      mockChainBuilder.execute.mockResolvedValueOnce(artifact);
 
-      const result = await wallet.getContractArtifact(mockContractId);
-      expect(result).toBe(mockContractArtifact);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractArtifact', { id: mockContractId });
+      const result = await wallet.getContractArtifact(contractClass.id);
+      expect(result).toBe(artifact);
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractArtifact', {
+        id: contractClass.id,
+      });
     });
 
     it('registers contract', async () => {
-      await wallet.registerContract({ instance: mockContractInstance, artifact: mockContractArtifact });
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
+      await wallet.registerContract({ instance: instance, artifact: artifact });
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_registerContract', {
-        instance: mockContractInstance,
-        artifact: mockContractArtifact,
+        instance,
+        artifact,
       });
     });
 
     it('registers contract class', async () => {
-      await wallet.registerContractClass(mockContractArtifact);
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
+      await wallet.registerContractClass(artifact);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_registerContractClass', {
-        artifact: mockContractArtifact,
+        artifact: artifact,
       });
     });
 
     it('gets contracts', async () => {
-      const mockContracts = [mockContractAddress];
+      const mockContracts = [instance.address];
       mockChainBuilder.execute.mockResolvedValueOnce(mockContracts);
 
       const result = await wallet.getContracts();
@@ -266,6 +260,7 @@ describe('AztecRemoteWallet', () => {
     const mockMessageHash = Fr.fromString('1');
 
     it('adds auth witness', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
       await wallet.addAuthWitness(mockAuthWitness);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_addAuthWitness', {
         authWitness: mockAuthWitness,
@@ -444,11 +439,13 @@ describe('AztecRemoteWallet', () => {
     const mockFilter = {} as IncomingNotesFilter;
 
     it('adds note', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
       await wallet.addNote(mockNote);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_addNote', { note: mockNote });
     });
 
     it('adds nullified note', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(true);
       await wallet.addNullifiedNote(mockNote);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_addNullifiedNote', { note: mockNote });
     });

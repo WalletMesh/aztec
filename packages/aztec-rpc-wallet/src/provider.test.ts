@@ -1,216 +1,276 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { AztecProvider } from './provider.js';
-import { AztecWalletError } from './errors.js';
+import { AztecWalletError, AztecWalletErrorType } from './errors.js';
 import type { JSONRPCTransport } from '@walletmesh/jsonrpc';
-import type { RouterMethodMap, RouterEventMap } from '@walletmesh/router';
-import type { AztecChainId } from './types.js';
-import { mockAddress, mockContractInstance, mockContractArtifact } from './test-utils.js';
+import type { ContractInstanceWithAddress, AztecAddress, ContractArtifact } from '@aztec/aztec.js';
+import { WalletRouterProvider } from '@walletmesh/router';
+import type { OperationBuilder } from '@walletmesh/router';
+import type { Mock } from 'vitest';
+
+const createMockTransport = () => ({
+  send: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  close: vi.fn(),
+});
 
 describe('AztecProvider', () => {
-  let transport: JSONRPCTransport;
   let provider: AztecProvider;
-  const testChain: AztecChainId = 'aztec:testnet';
-  const devChain: AztecChainId = 'aztec:devnet';
+  let mockTransport: ReturnType<typeof createMockTransport>;
+  let mockChainBuilder: {
+    chainId: string;
+    provider: WalletRouterProvider;
+    calls: unknown[];
+    call: Mock;
+    execute: Mock;
+  };
 
   beforeEach(() => {
-    transport = {
-      send: vi.fn().mockResolvedValue(undefined),
+    mockTransport = createMockTransport();
+    provider = new AztecProvider(mockTransport);
+
+    // Setup chain builder mock after provider creation
+    mockChainBuilder = {
+      chainId: 'aztec:testnet',
+      provider: provider,
+      calls: [],
+      call: vi.fn(),
+      execute: vi.fn(),
     };
-    provider = new AztecProvider(transport);
-  });
 
-  describe('Connection Management', () => {
-    it('should connect to chain', async () => {
-      const sessionId = 'test-session';
+    // Setup mock chain builder
+    mockChainBuilder.call.mockImplementation(() => mockChainBuilder);
+    mockChainBuilder.execute.mockImplementation(() => Promise.resolve());
 
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ sessionId });
-      const response = await provider.connect(['aztec:testnet']);
-      expect(response).toBe('test-session');
-
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'wm_connect',
-        expect.objectContaining({
-          permissions: {
-            'aztec:testnet': expect.arrayContaining(['aztec_getAccount', 'aztec_sendTransaction']),
-          },
-        }),
-      );
-    });
-
-    it('should handle invalid connect response', async () => {
-      provider.callMethod = vi.fn().mockResolvedValueOnce({ invalid: 'response' });
-      await expect(provider.connect([])).rejects.toThrow(AztecWalletError);
-    });
-
-    it('should disconnect from all chains', async () => {
-      provider.callMethod = vi
-        .fn()
-        .mockResolvedValueOnce({ sessionId: 'test-session' })
-        .mockResolvedValueOnce(null);
-
-      await provider.connect([]);
-      await provider.disconnect();
-
-      expect(provider.callMethod).toHaveBeenLastCalledWith('wm_disconnect', { sessionId: 'test-session' });
-      expect(provider.getSupportedChains()).toHaveLength(0);
+    // Setup additional mocks
+    vi.spyOn(provider as WalletRouterProvider, 'sessionId', 'get').mockReturnValue('test-session-id');
+    vi.spyOn(provider, 'chain').mockImplementation((chainId) => {
+      mockChainBuilder.chainId = chainId;
+      mockChainBuilder.call.mockImplementation((method, params) => {
+        mockChainBuilder.calls.push({ method, params });
+        return mockChainBuilder;
+      });
+      mockChainBuilder.execute.mockImplementation(async () => {
+        const result = await Promise.resolve(null);
+        if (result === null) {
+          throw new AztecWalletError(AztecWalletErrorType.invalidResponse, 'Invalid response');
+        }
+        return result;
+      });
+      return mockChainBuilder as unknown as OperationBuilder;
     });
   });
 
-  describe('Method Calls', () => {
-    beforeEach(async () => {
-      // Setup session and chain
-      Object.defineProperty(provider, 'sessionId', {
-        get: vi.fn().mockReturnValue('test-session'),
+  describe('constructor', () => {
+    test('registers event handlers', () => {
+      // Create a spy on the on method before creating provider
+      const onSpy = vi.spyOn(WalletRouterProvider.prototype, 'on');
+      const provider = new AztecProvider(mockTransport);
+
+      expect(onSpy).toHaveBeenCalledWith('wm_walletStateChanged', expect.any(Function));
+      expect(onSpy).toHaveBeenCalledWith('wm_sessionTerminated', expect.any(Function));
+
+      onSpy.mockRestore();
+    });
+
+    test('initializes with empty chain sets', () => {
+      expect(provider.getSupportedChains()).toEqual([]);
+    });
+  });
+
+  describe('handleWalletStateChanged', () => {
+    test('adds chain when accounts become available', () => {
+      const chainId = 'aztec:testnet';
+      provider['requestedChains'].add(chainId);
+
+      provider['handleWalletStateChanged']({
+        chainId,
+        changes: { accounts: ['0x123'] },
       });
-      Object.defineProperty(provider, 'requestedChains', {
-        value: new Set([testChain]),
+
+      expect(provider.getSupportedChains()).toContain(chainId);
+    });
+
+    test('removes chain when accounts become unavailable', () => {
+      const chainId = 'aztec:testnet';
+      provider['requestedChains'].add(chainId);
+      provider['connectedChains'].add(chainId);
+
+      provider['handleWalletStateChanged']({
+        chainId,
+        changes: { accounts: [] },
       });
+
+      expect(provider.getSupportedChains()).not.toContain(chainId);
     });
 
-    it('should execute single method call', async () => {
-      const mockResult = '0x123';
-      vi.spyOn(provider, 'executeCall').mockResolvedValue(mockResult);
+    test('ignores events for non-requested chains', () => {
+      const chainId = 'aztec:testnet';
+      // Chain not added to requestedChains
 
-      const result = await provider.getAccount(testChain);
-      expect(result).toBe(mockResult);
-      expect(provider.executeCall).toHaveBeenCalledWith(testChain, 'aztec_getAccount', undefined);
+      provider['handleWalletStateChanged']({
+        chainId,
+        changes: { accounts: ['0x123'] },
+      });
+
+      expect(provider.getSupportedChains()).not.toContain(chainId);
+    });
+  });
+
+  describe('handleSessionTerminated', () => {
+    test('clears chains when session matches', () => {
+      const chainId = 'aztec:testnet';
+      provider['requestedChains'].add(chainId);
+      provider['connectedChains'].add(chainId);
+
+      provider['handleSessionTerminated']({
+        sessionId: 'test-session-id',
+        reason: 'test termination',
+      });
+
+      expect(provider.getSupportedChains()).toEqual([]);
+      expect(provider['requestedChains'].size).toBe(0);
     });
 
-    it('should execute method call with params', async () => {
-      const mockResult = '0xtx';
-      const mockParams = {
-        functionCalls: [
-          {
-            contractAddress: '0x123',
-            functionName: 'transfer',
-            args: ['0x456', 100],
-          },
-        ],
-      };
-      vi.spyOn(provider, 'executeCall').mockResolvedValue(mockResult);
+    test('ignores termination for different sessions', () => {
+      const chainId = 'aztec:testnet';
+      provider['requestedChains'].add(chainId);
+      provider['connectedChains'].add(chainId);
 
-      const result = await provider.sendTransaction(testChain, mockParams);
-      expect(result).toBe(mockResult);
-      expect(provider.executeCall).toHaveBeenCalledWith(testChain, 'aztec_sendTransaction', mockParams);
+      provider['handleSessionTerminated']({
+        sessionId: 'different-session',
+        reason: 'test termination',
+      });
+
+      expect(provider.getSupportedChains()).toContain(chainId);
+      expect(provider['requestedChains'].has(chainId)).toBe(true);
+    });
+  });
+
+  describe('getAccount', () => {
+    test('returns account address on success', async () => {
+      const expectedAddress = '0x123';
+      mockChainBuilder.execute.mockResolvedValueOnce(expectedAddress);
+
+      const result = await provider.getAccount('aztec:testnet');
+      expect(result).toBe(expectedAddress);
     });
 
-    it('should execute bulk method calls', async () => {
-      const mockResults = ['0x123', ['0x456', '0x789'], 42];
-      vi.spyOn(provider, 'executeBulkCall').mockResolvedValue(mockResults);
+    test('throws on invalid response', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(null);
 
-      const results = await provider
-        .chain(testChain)
-        .call('aztec_getAccount')
-        .call('aztec_getSenders')
-        .call('aztec_getBlockNumber')
-        .execute();
-
-      expect(results).toEqual(mockResults);
-      expect(provider.executeBulkCall).toHaveBeenCalledWith(testChain, [
-        { method: 'aztec_getAccount' },
-        { method: 'aztec_getSenders' },
-        { method: 'aztec_getBlockNumber' },
-      ]);
-    });
-
-    it('should route method calls through wm_call', async () => {
-      const mockResult = '0x123';
-      vi.spyOn(provider, 'callMethod').mockResolvedValue(mockResult);
-
-      await provider.executeCall(testChain, 'aztec_getAccount');
-
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'wm_call',
-        expect.objectContaining({
-          chainId: testChain,
-          sessionId: 'test-session',
-          call: {
-            method: 'aztec_getAccount',
-            params: undefined,
-          },
-        }),
+      await expect(provider.getAccount('aztec:testnet')).rejects.toThrowError(
+        new AztecWalletError(AztecWalletErrorType.invalidResponse, 'Invalid account address returned'),
       );
     });
+  });
 
-    it('should route bulk calls through wm_bulkCall', async () => {
-      const mockResults = ['0x123', '0x456'];
-      vi.spyOn(provider, 'callMethod').mockResolvedValue(mockResults);
+  describe('sendTransaction', () => {
+    const mockTxParams = {
+      functionCalls: [
+        {
+          contractAddress: '0x456',
+          functionName: 'transfer',
+          args: ['0x789', 100],
+        },
+      ],
+    };
 
-      await provider.executeBulkCall(testChain, [
-        { method: 'aztec_getAccount' },
-        { method: 'aztec_getBlockNumber' },
-      ]);
+    test('returns transaction hash on success', async () => {
+      const expectedHash = '0xabc';
+      mockChainBuilder.execute.mockResolvedValueOnce(expectedHash);
 
-      expect(provider.callMethod).toHaveBeenCalledWith(
-        'wm_bulkCall',
-        expect.objectContaining({
-          chainId: testChain,
-          sessionId: 'test-session',
-          calls: [{ method: 'aztec_getAccount' }, { method: 'aztec_getBlockNumber' }],
-        }),
-      );
+      const result = await provider.sendTransaction('aztec:testnet', mockTxParams);
+      expect(result).toBe(expectedHash);
     });
 
-    it('should validate method results', async () => {
-      vi.spyOn(provider, 'executeCall').mockResolvedValue(123); // Number instead of string
+    test('throws on invalid response', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(null);
 
-      await expect(provider.chain(testChain).call('aztec_getAccount').execute()).rejects.toThrow(
-        AztecWalletError,
+      await expect(provider.sendTransaction('aztec:testnet', mockTxParams)).rejects.toThrowError(
+        new AztecWalletError(AztecWalletErrorType.invalidResponse, 'Invalid transaction hash returned'),
       );
     });
+  });
 
-    it('should validate bulk results', async () => {
-      vi.spyOn(provider, 'executeBulkCall').mockResolvedValue(['0x123', 456]); // Second result should be string
+  describe('simulateTransaction', () => {
+    const mockSimParams = {
+      contractAddress: '0x456',
+      functionName: 'transfer',
+      args: ['0x789', 100],
+    };
+
+    test('returns simulation result on success', async () => {
+      const expectedResult = { success: true, gas: 1000 };
+      mockChainBuilder.execute.mockResolvedValueOnce(expectedResult);
+
+      const result = await provider.simulateTransaction('aztec:testnet', mockSimParams);
+      expect(result).toEqual(expectedResult);
+    });
+
+    test('throws on invalid response', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(null);
+
+      await expect(provider.simulateTransaction('aztec:testnet', mockSimParams)).rejects.toThrowError(
+        new AztecWalletError(AztecWalletErrorType.invalidResponse, 'Invalid simulation result returned'),
+      );
+    });
+  });
+
+  describe('registration methods', () => {
+    test('registerContract executes without error', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(undefined);
 
       await expect(
-        provider.chain(testChain).call('aztec_getAccount').call('aztec_getAccount').execute(),
-      ).rejects.toThrow(AztecWalletError);
+        provider.registerContract('aztec:testnet', {
+          instance: {
+            address: '0x123' as unknown as AztecAddress,
+            version: 1,
+            salt: '0x0' as unknown as AztecAddress,
+            deployer: '0x0' as unknown as AztecAddress,
+            contractClassId: '0x0' as unknown as AztecAddress,
+            contractClassVersion: 1,
+            publicKey: '0x0' as unknown as AztecAddress,
+          } as unknown as ContractInstanceWithAddress,
+          artifact: {
+            name: 'TestContract',
+            bytecode: '0x',
+            functionSelectors: {},
+            functions: {},
+            outputs: {},
+            storageLayout: {},
+            events: {},
+          } as unknown as ContractArtifact,
+        }),
+      ).resolves.not.toThrow();
     });
 
-    it('should handle registration methods', async () => {
-      vi.spyOn(provider, 'executeCall').mockResolvedValue(true);
+    test('registerContractClass executes without error', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(undefined);
 
-      const mockInstance = mockContractInstance('0x1234567890123456789012345678901234567890');
-      const mockArtifact = mockContractArtifact();
-
-      // Register contract
-      await provider.registerContract(testChain, {
-        instance: mockInstance,
-        artifact: mockArtifact,
-      });
-      expect(provider.executeCall).toHaveBeenCalledWith(
-        testChain,
-        'aztec_registerContract',
-        expect.objectContaining({
-          instance: mockInstance,
-          artifact: mockArtifact,
+      await expect(
+        provider.registerContractClass('aztec:testnet', {
+          artifact: {
+            name: 'TestContract',
+            bytecode: '0x',
+            functionSelectors: {},
+            functions: {},
+            outputs: {},
+            storageLayout: {},
+            events: {},
+          } as unknown as ContractArtifact,
         }),
-      );
+      ).resolves.not.toThrow();
+    });
 
-      // Register contract class
-      await provider.registerContractClass(testChain, {
-        artifact: mockArtifact,
-      });
-      expect(provider.executeCall).toHaveBeenCalledWith(
-        testChain,
-        'aztec_registerContractClass',
-        expect.objectContaining({
-          artifact: mockArtifact,
-        }),
-      );
+    test('registerSender executes without error', async () => {
+      mockChainBuilder.execute.mockResolvedValueOnce(undefined);
 
-      // Register sender
-      const senderAddress = mockAddress('0x1234567890123456789012345678901234567890');
-      await provider.registerSender(testChain, {
-        sender: senderAddress,
-      });
-      expect(provider.executeCall).toHaveBeenCalledWith(
-        testChain,
-        'aztec_registerSender',
-        expect.objectContaining({
-          sender: senderAddress,
+      await expect(
+        provider.registerSender('aztec:testnet', {
+          sender: '0x123' as unknown as AztecAddress,
         }),
-      );
+      ).resolves.not.toThrow();
     });
   });
 });

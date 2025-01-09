@@ -39,6 +39,6 @@
     "@aztec/circuits.js": "^0.68.2",
     "@aztec/foundation": "0.68.2",
     "@walletmesh/jsonrpc": "0.2.2",
-    "@walletmesh/router": "0.2.2"
+    "@walletmesh/router": "0.2.7"
   }
 }

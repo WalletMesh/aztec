@@ -86,7 +86,20 @@ export async function simulateTransaction(
     const artifact = await context.contractArtifactCache.getContractArtifact(addr);
     const contract = await Contract.at(addr, artifact, context.wallet);
     const result = await contract.methods[functionName](...args).simulate();
-    return result;
+    // TODO: Is this sufficient for serializing the result?
+    switch (typeof result) {
+      case 'string':
+        return result;
+      case 'bigint':
+        return result.toString();
+      case 'object':
+        if (result instanceof Uint8Array) {
+          return Buffer.from(result).toString('hex');
+        }
+        return result;
+      default:
+        return result;
+    }
   } catch (error) {
     if (error instanceof AztecWalletError) {
       throw error;

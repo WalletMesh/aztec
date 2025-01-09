@@ -3,7 +3,7 @@
 [@walletmesh/aztec-rpc-wallet](https://github.com/WalletMesh/aztec/tree/main/packages/aztec-rpc-wallet) provides a type-safe RPC interface for interacting with [Aztec](https://aztec.network) wallets. It consists of three main components:
 
 - **AztecProvider**: Client-side provider for dApps to communicate with Aztec wallets
-- **AztecWallet**: Server-side implementation that handles RPC requests using an Aztec wallet instance
+- **AztecChainWallet**: Server-side implementation that handles RPC requests using an Aztec wallet instance
 - **AztecOperationBuilder**: Fluent API for chaining multiple RPC method calls
 
 The library is built on [@walletmesh/jsonrpc](https://github.com/WalletMesh/wm-core/tree/main/packages/jsonrpc#readme) and [@walletmesh/router](https://github.com/WalletMesh/wm-core/tree/main/packages/router#readme).
@@ -213,11 +213,11 @@ try {
 Server-side implementation using `AztecWallet`:
 
 ```typescript
-import { AztecWallet } from '@walletmesh/aztec-rpc-wallet';
+import { AztecChainWallet } from '@walletmesh/aztec-rpc-wallet';
 import type { PXE, AccountWallet } from '@aztec/aztec.js';
 
 // Create wallet instance
-const wallet = new AztecWallet(
+const wallet = new AztecChainWallet(
   pxe,           // PXE instance
   accountWallet, // Aztec AccountWallet instance
   transport     // Transport layer

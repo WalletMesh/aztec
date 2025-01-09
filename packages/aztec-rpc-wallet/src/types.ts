@@ -136,12 +136,21 @@ export type AztecWalletContext = Record<string, unknown> & {
 };
 
 /**
- * Type for Aztec wallet RPC middleware.
+ * Type for Aztec Router Wallet middleware.
  * @public
  */
 export type AztecWalletMiddleware = JSONRPCMiddleware<AztecWalletBaseMethodMap, AztecWalletContext>;
 
-export type AztecWalletRouterClient = JSONRPCWalletClient<AztecWalletBaseMethodMap>;
+/**
+ * Type for Aztec Chain Wallet middleware.
+ */
+export type AztecChainWalletMiddleware = JSONRPCMiddleware<AztecWalletMethodMap, AztecWalletContext>;
+
+/**
+ * Type for Aztec wallet router client.
+ * @public
+ */
+export type AztecWalletRouterClient = JSONRPCWalletClient<AztecWalletMethodMap>;
 
 /**
  * Type for Aztec wallet RPC method map.

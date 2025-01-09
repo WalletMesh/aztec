@@ -40,7 +40,7 @@ import { Fr } from '@aztec/aztec.js';
 
 import type { JSONRPCTransport } from '@walletmesh/jsonrpc';
 import { AztecProvider } from './provider.js';
-import type { AztecChainId } from './types.js';
+import type { AztecChainId, AztecWalletMethodMap } from './types.js';
 
 export class AztecRemoteWallet implements Wallet {
   private _address: AztecAddress | undefined;
@@ -58,7 +58,7 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_isL1ToL2MessageSynced', { l1ToL2Message })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_isL1ToL2MessageSynced']['result']>;
   }
 
   getAddress(): AztecAddress {
@@ -67,22 +67,22 @@ export class AztecRemoteWallet implements Wallet {
         .chain(this._providerChainId)
         .call('aztec_getAddress')
         .execute()
-        .then(async (addr) => {
-          this._address = addr;
+        .then((result) => {
+          this._address = result as AztecWalletMethodMap['aztec_getAddress']['result'];
         });
       throw new Error('Address not yet available');
     }
     return this._address;
   }
 
-  getCompleteAddress() {
+  getCompleteAddress(): CompleteAddress {
     if (!this._completeAddress) {
       this._provider
         .chain(this._providerChainId)
         .call('aztec_getCompleteAddress')
         .execute()
-        .then(async (addr) => {
-          this._completeAddress = addr;
+        .then((result) => {
+          this._completeAddress = result as AztecWalletMethodMap['aztec_getCompleteAddress']['result'];
         });
       throw new Error('Complete address not yet available');
     }
@@ -95,7 +95,8 @@ export class AztecRemoteWallet implements Wallet {
         .chain(this._providerChainId)
         .call('aztec_getChainId')
         .execute()
-        .then(async (chainId) => {
+        .then((result) => {
+          const chainId = result as AztecWalletMethodMap['aztec_getChainId']['result'];
           this._chainId = Fr.fromString(chainId.toString(10));
         });
       throw new Error('Chain ID not yet available');
@@ -109,7 +110,8 @@ export class AztecRemoteWallet implements Wallet {
         .chain(this._providerChainId)
         .call('aztec_getVersion')
         .execute()
-        .then(async (version) => {
+        .then((result) => {
+          const version = result as AztecWalletMethodMap['aztec_getVersion']['result'];
           this._version = Fr.fromString(version.toString(10));
         });
       throw new Error('Version not yet available');
@@ -121,33 +123,38 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_createTxExecutionRequest', { exec })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_createTxExecutionRequest']['result']>;
   }
 
   async createAuthWit(intent: Fr | Buffer | IntentAction | IntentInnerHash): Promise<AuthWitness> {
-    return this._provider.chain(this._providerChainId).call('aztec_createAuthWit', { intent }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_createAuthWit', { intent })
+      .execute() as Promise<AztecWalletMethodMap['aztec_createAuthWit']['result']>;
   }
 
   setScopes(scopes: AztecAddress[]): void {
+    // TODO: would be nice to return a promise here
     this._scopes = scopes;
-    // TODO: return promise
     this._provider
       .chain(this._providerChainId)
       .call('aztec_setScopes', { scopes })
       .execute()
       .then((result) => {
-        console.log(`setScopes(${scopes}) result: ${result}`);
+        const success = result as AztecWalletMethodMap['aztec_setScopes']['result'];
+        console.debug(`setScopes(${scopes}) result: ${success}`);
       });
   }
 
   getScopes(): AztecAddress[] {
+    // TODO: would be nice to return a promise here
     if (!this._scopes) {
       this._provider
         .chain(this._providerChainId)
         .call('aztec_getScopes')
         .execute()
-        .then(async (scopes) => {
-          this._scopes = scopes;
+        .then((result) => {
+          this._scopes = result as AztecWalletMethodMap['aztec_getScopes']['result'];
         });
       throw new Error('Scopes not yet available');
     }
@@ -155,7 +162,10 @@ export class AztecRemoteWallet implements Wallet {
   }
 
   async getScopesAsync(): Promise<AztecAddress[]> {
-    const scopes = await this._provider.chain(this._providerChainId).call('aztec_getScopes').execute();
+    const scopes = (await this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getScopes')
+      .execute()) as AztecWalletMethodMap['aztec_getScopes']['result'];
     this._scopes = scopes;
     return scopes;
   }
@@ -164,69 +174,89 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_getContractInstance', { address })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_getContractInstance']['result']>;
   }
 
   async getContractClass(id: Fr): Promise<ContractClassWithId | undefined> {
-    return this._provider.chain(this._providerChainId).call('aztec_getContractClass', { id }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getContractClass', { id })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getContractClass']['result']>;
   }
 
   async getContractArtifact(id: Fr): Promise<ContractArtifact | undefined> {
-    return this._provider.chain(this._providerChainId).call('aztec_getContractArtifact', { id }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getContractArtifact', { id })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getContractArtifact']['result']>;
   }
 
   async addCapsule(capsule: Fr[]): Promise<void> {
-    await this._provider.chain(this._providerChainId).call('aztec_addCapsule', { capsule }).execute();
+    const result = (await this._provider
+      .chain(this._providerChainId)
+      .call('aztec_addCapsule', { capsule })
+      .execute()) as AztecWalletMethodMap['aztec_addCapsule']['result'];
+    if (!result) throw new Error('Failed to add capsule');
   }
 
   async registerAccount(secretKey: Fr, partialAddress: PartialAddress): Promise<CompleteAddress> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_registerAccount', { secretKey, partialAddress })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_registerAccount']['result']>;
   }
 
   async getRegisteredAccounts(): Promise<CompleteAddress[]> {
-    return this._provider.chain(this._providerChainId).call('aztec_getRegisteredAccounts').execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getRegisteredAccounts')
+      .execute() as Promise<AztecWalletMethodMap['aztec_getRegisteredAccounts']['result']>;
   }
 
   async registerSender(address: AztecAddress): Promise<AztecAddress> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_registerSender', { sender: address })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_registerSender']['result']>;
   }
 
   async getSenders(): Promise<AztecAddress[]> {
-    return this._provider.chain(this._providerChainId).call('aztec_getSenders').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getSenders').execute() as Promise<
+      AztecWalletMethodMap['aztec_getSenders']['result']
+    >;
   }
 
   async removeSender(address: AztecAddress): Promise<void> {
-    await this._provider
+    const result = (await this._provider
       .chain(this._providerChainId)
       .call('aztec_removeSender', { sender: address })
-      .execute();
+      .execute()) as AztecWalletMethodMap['aztec_removeSender']['result'];
+    if (!result) throw new Error('Failed to remove sender');
   }
 
   async registerContract(contract: {
     instance: ContractInstanceWithAddress;
     artifact?: ContractArtifact;
   }): Promise<void> {
-    await this._provider
+    const result = (await this._provider
       .chain(this._providerChainId)
       .call('aztec_registerContract', { instance: contract.instance, artifact: contract.artifact })
-      .execute();
+      .execute()) as AztecWalletMethodMap['aztec_registerContract']['result'];
+    if (!result) throw new Error('Failed to register contract');
   }
 
   async registerContractClass(artifact: ContractArtifact): Promise<void> {
-    await this._provider
+    const result = (await this._provider
       .chain(this._providerChainId)
       .call('aztec_registerContractClass', { artifact })
-      .execute();
+      .execute()) as AztecWalletMethodMap['aztec_registerContractClass']['result'];
+    if (!result) throw new Error('Failed to register contract class');
   }
 
   async getContracts(): Promise<AztecAddress[]> {
-    return this._provider.chain(this._providerChainId).call('aztec_getContracts').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getContracts').execute() as Promise<
+      AztecWalletMethodMap['aztec_getContracts']['result']
+    >;
   }
 
   async proveTx(
@@ -236,7 +266,7 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_proveTx', { txRequest, privateExecutionResult })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_proveTx']['result']>;
   }
 
   async simulateTx(
@@ -258,47 +288,70 @@ export class AztecRemoteWallet implements Wallet {
         enforceFeePayment,
         profile,
       })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_simulateTx']['result']>;
   }
 
   async sendTx(tx: Tx): Promise<TxHash> {
-    const result = await this._provider.chain(this._providerChainId).call('aztec_sendTx', { tx }).execute();
-    return result as TxHash;
+    return this._provider.chain(this._providerChainId).call('aztec_sendTx', { tx }).execute() as Promise<
+      AztecWalletMethodMap['aztec_sendTx']['result']
+    >;
   }
 
   async getTxEffect(txHash: TxHash): Promise<InBlock<TxEffect>> {
-    return this._provider.chain(this._providerChainId).call('aztec_getTxEffect', { txHash }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getTxEffect', { txHash })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getTxEffect']['result']>;
   }
 
   async getTxReceipt(txHash: TxHash): Promise<TxReceipt> {
-    return this._provider.chain(this._providerChainId).call('aztec_getTxReceipt', { txHash }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getTxReceipt', { txHash })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getTxReceipt']['result']>;
   }
 
   async getIncomingNotes(filter: IncomingNotesFilter): Promise<UniqueNote[]> {
-    return this._provider.chain(this._providerChainId).call('aztec_getIncomingNotes', { filter }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getIncomingNotes', { filter })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getIncomingNotes']['result']>;
   }
 
   async getPublicStorageAt(contract: AztecAddress, storageSlot: Fr): Promise<Fr> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_getPublicStorageAt', { contract, storageSlot })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_getPublicStorageAt']['result']>;
   }
 
   async addNote(note: ExtendedNote): Promise<void> {
-    await this._provider.chain(this._providerChainId).call('aztec_addNote', { note }).execute();
+    const result = (await this._provider
+      .chain(this._providerChainId)
+      .call('aztec_addNote', { note })
+      .execute()) as AztecWalletMethodMap['aztec_addNote']['result'];
+    if (!result) throw new Error('Failed to add note');
   }
 
   async addNullifiedNote(note: ExtendedNote): Promise<void> {
-    await this._provider.chain(this._providerChainId).call('aztec_addNullifiedNote', { note }).execute();
+    const result = (await this._provider
+      .chain(this._providerChainId)
+      .call('aztec_addNullifiedNote', { note })
+      .execute()) as AztecWalletMethodMap['aztec_addNullifiedNote']['result'];
+    if (!result) throw new Error('Failed to add nullified note');
   }
 
   async getBlock(number: number): Promise<L2Block | undefined> {
-    return this._provider.chain(this._providerChainId).call('aztec_getBlock', { number }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getBlock', { number })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getBlock']['result']>;
   }
 
   async getCurrentBaseFees(): Promise<GasFees> {
-    return this._provider.chain(this._providerChainId).call('aztec_getCurrentBaseFees').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getCurrentBaseFees').execute() as Promise<
+      AztecWalletMethodMap['aztec_getCurrentBaseFees']['result']
+    >;
   }
 
   async simulateUnconstrained(
@@ -310,93 +363,107 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_simulateUnconstrained', { functionName, args, to, from })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_simulateUnconstrained']['result']>;
   }
 
   async getUnencryptedLogs(filter: LogFilter): Promise<GetUnencryptedLogsResponse> {
-    return this._provider.chain(this._providerChainId).call('aztec_getUnencryptedLogs', { filter }).execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getUnencryptedLogs', { filter })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getUnencryptedLogs']['result']>;
   }
 
   async getContractClassLogs(filter: LogFilter): Promise<GetUnencryptedLogsResponse> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_getContractClassLogs', { filter })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_getContractClassLogs']['result']>;
   }
 
   async getBlockNumber(): Promise<number> {
-    return this._provider.chain(this._providerChainId).call('aztec_getBlockNumber').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getBlockNumber').execute() as Promise<
+      AztecWalletMethodMap['aztec_getBlockNumber']['result']
+    >;
   }
 
   async getProvenBlockNumber(): Promise<number> {
-    return this._provider.chain(this._providerChainId).call('aztec_getProvenBlockNumber').execute();
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getProvenBlockNumber')
+      .execute() as Promise<AztecWalletMethodMap['aztec_getProvenBlockNumber']['result']>;
   }
 
   async getNodeInfo(): Promise<NodeInfo> {
-    return this._provider.chain(this._providerChainId).call('aztec_getNodeInfo').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getNodeInfo').execute() as Promise<
+      AztecWalletMethodMap['aztec_getNodeInfo']['result']
+    >;
   }
 
   async addAuthWitness(authWitness: AuthWitness): Promise<void> {
-    await this._provider.chain(this._providerChainId).call('aztec_addAuthWitness', { authWitness }).execute();
+    const result = (await this._provider
+      .chain(this._providerChainId)
+      .call('aztec_addAuthWitness', { authWitness })
+      .execute()) as AztecWalletMethodMap['aztec_addAuthWitness']['result'];
+    if (!result) throw new Error('Failed to add auth witness');
   }
 
   async getAuthWitness(messageHash: Fr): Promise<Fr[]> {
-    return await this._provider
+    return (await this._provider
       .chain(this._providerChainId)
       .call('aztec_getAuthWitness', { messageHash })
-      .execute();
+      .execute()) as Promise<AztecWalletMethodMap['aztec_getAuthWitness']['result']>;
   }
 
   async isContractClassPubliclyRegistered(id: Fr): Promise<boolean> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_isContractClassPubliclyRegistered', { id })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_isContractClassPubliclyRegistered']['result']>;
   }
 
   async isContractPubliclyDeployed(address: AztecAddress): Promise<boolean> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_isContractPubliclyDeployed', { address })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_isContractPubliclyDeployed']['result']>;
   }
 
   async isContractInitialized(address: AztecAddress): Promise<boolean> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_isContractInitialized', { address })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_isContractInitialized']['result']>;
   }
 
   async getPXEInfo(): Promise<PXEInfo> {
-    return this._provider.chain(this._providerChainId).call('aztec_getPXEInfo').execute();
+    return this._provider.chain(this._providerChainId).call('aztec_getPXEInfo').execute() as Promise<
+      AztecWalletMethodMap['aztec_getPXEInfo']['result']
+    >;
   }
 
-  async getEncryptedEvents<T>(
+  getEncryptedEvents<T>(
     event: EventMetadataDefinition,
     from: number,
     limit: number,
     vpks: Point[] = [],
   ): Promise<T[]> {
-    const address = await this.getCompleteAddress();
-    const result = await this._provider
+    const completeAddress = this.getCompleteAddress();
+    return this._provider
       .chain(this._providerChainId)
       .call('aztec_getEncryptedEvents', {
         event,
         from,
         limit,
-        vpks: vpks.length ? vpks : [address.publicKeys.masterIncomingViewingPublicKey],
+        vpks: vpks.length ? vpks : [completeAddress.publicKeys.masterIncomingViewingPublicKey],
       })
-      .execute();
-    return result as T[];
+      .execute() as Promise<T[]>;
   }
 
-  async getUnencryptedEvents<T>(event: EventMetadataDefinition, from: number, limit: number): Promise<T[]> {
-    const result = await this._provider
+  getUnencryptedEvents<T>(event: EventMetadataDefinition, from: number, limit: number): Promise<T[]> {
+    return this._provider
       .chain(this._providerChainId)
       .call('aztec_getUnencryptedEvents', { event, from, limit })
-      .execute();
-    return result as T[];
+      .execute() as Promise<T[]>;
   }
 
   async getL1ToL2MembershipWitness(
@@ -407,7 +474,7 @@ export class AztecRemoteWallet implements Wallet {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_getL1ToL2MembershipWitness', { contractAddress, messageHash, secret })
-      .execute();
+      .execute() as Promise<AztecWalletMethodMap['aztec_getL1ToL2MembershipWitness']['result']>;
   }
 }
 

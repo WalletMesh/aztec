@@ -4,7 +4,6 @@ include:
 services:
   setup-account:
     image: "aztecprotocol/aztec"
-    platform: linux/amd64
     restart: "no"
     depends_on:
       - aztec
@@ -29,7 +28,6 @@ services:
         cat /deployment-data/account.json
   setup-contract:
     image: "aztecprotocol/aztec"
-    platform: linux/amd64
     restart: "no"
     depends_on:
       setup-account:

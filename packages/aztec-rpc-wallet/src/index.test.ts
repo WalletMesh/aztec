@@ -6,12 +6,8 @@ describe('index exports', () => {
     expect(exports.AztecProvider).toBeDefined();
   });
 
-  it('should export AztecOperationBuilder', () => {
-    expect(exports.AztecOperationBuilder).toBeDefined();
-  });
-
-  it('should export AztecWallet', () => {
-    expect(exports.AztecWallet).toBeDefined();
+  it('should export AztecChainWallet', () => {
+    expect(exports.AztecChainWallet).toBeDefined();
   });
 
   it('should export error utilities', () => {

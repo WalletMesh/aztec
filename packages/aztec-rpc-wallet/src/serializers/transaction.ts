@@ -300,13 +300,32 @@ export class AztecSimulateTxSerializer
 
   result = {
     serialize: (method: string, value: TxSimulationResult): JSONRPCSerializedData => {
+      const serializablePrivateExecutionResult = SerializablePrivateExecutionResult.from(
+        value.privateExecutionResult,
+      );
+
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(TxSimulationResult.schema.parse(value))),
+        serialized: encodeBase64(
+          JSON.stringify({
+            privateExecutionResult: serializablePrivateExecutionResult,
+            publicInputs: value.publicInputs,
+            publicOutput: value.publicOutput,
+            profileResult: value.profileResult,
+          }),
+        ),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): TxSimulationResult => {
-      return TxSimulationResult.schema.parse(JSON.parse(decodeBase64(data.serialized)));
+      const { privateExecutionResult, publicInputs, publicOutput, profileResult } = JSON.parse(
+        decodeBase64(data.serialized),
+      );
+      return new TxSimulationResult(
+        SerializablePrivateExecutionResult.fromJSON(privateExecutionResult),
+        publicInputs,
+        publicOutput,
+        profileResult,
+      );
     },
   };
 }

@@ -1,4 +1,4 @@
-import type { AztecWalletContext, AztecWalletRPCMiddleware } from '@walletmesh/aztec/rpc';
+import type { AztecWalletContext, AztecChainWalletMiddleware } from '@walletmesh/aztec-rpc-wallet';
 import type { FunctionArgNames } from './functionArgNamesMiddleware';
 import type { HistoryEntry } from './historyMiddleware';
 
@@ -15,11 +15,11 @@ export const createApprovalMiddleware = (
   >,
   setRequestHistory: React.Dispatch<React.SetStateAction<HistoryEntry[]>>,
   isConnectedRef: React.MutableRefObject<boolean>,
-): AztecWalletRPCMiddleware => {
+): AztecChainWalletMiddleware => {
   return async (context: AztecWalletContext & { functionCallArgNames?: FunctionArgNames }, req, next) => {
     return new Promise((resolve, reject) => {
       setPendingRequest({
-        method: req.method,
+        method: String(req.method),
         params: req.params,
         origin: window.location.origin,
         functionArgNames: context.functionCallArgNames,

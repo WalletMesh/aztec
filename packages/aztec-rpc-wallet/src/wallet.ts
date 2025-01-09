@@ -9,7 +9,6 @@ import type {
   AztecWalletEventMap,
   AztecWalletRouterClient,
 } from './types.js';
-import { AztecWalletError } from './errors.js';
 import { AztecWalletSerializer } from './serializers/index.js';
 
 import { ContractArtifactCache } from './contractArtifactCache.js';

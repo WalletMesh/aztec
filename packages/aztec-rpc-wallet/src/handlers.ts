@@ -50,7 +50,7 @@ export async function handler<M extends keyof AztecWalletMethodMap>(
     }
     // Core wallet methods
     case 'aztec_getAccount':
-      return context.wallet.getAddress();
+      return (await context.wallet.getAddress()).toString();
 
     // Transaction methods
     case 'aztec_sendTransaction':

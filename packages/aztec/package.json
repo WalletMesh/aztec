@@ -1,6 +1,6 @@
 {
   "name": "@walletmesh/aztec",
-  "version": "0.0.8",
+  "version": "0.1.0",
   "description": "WalletMesh Aztec package",
   "type": "module",
   "main": "dist/index.js",
@@ -20,6 +20,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WalletMesh/aztec.git"
+  },
+  "homepage": "https://github.com/WalletMesh/aztec/tree/main",
   "scripts": {
     "build": "tsc --build tsconfig.build.json",
     "clean": "rimraf dist node_modules",

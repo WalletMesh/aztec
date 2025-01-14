@@ -1,9 +1,9 @@
 import type {
   AztecWalletContext,
-  AztecWalletRPCMiddleware,
+  AztecChainWalletMiddleware,
   TransactionParams,
   TransactionFunctionCall,
-} from '@walletmesh/aztec/rpc';
+} from '@walletmesh/aztec-rpc-wallet';
 
 import { applyToMethods } from '@walletmesh/jsonrpc';
 import {
@@ -49,7 +49,7 @@ async function storeFunctionParamInfo(
  */
 export const functionArgNamesMiddleware = (
   isConnectedRef: React.MutableRefObject<boolean>,
-): AztecWalletRPCMiddleware => {
+): AztecChainWalletMiddleware => {
   return applyToMethods(
     ['aztec_sendTransaction', 'aztec_simulateTransaction'],
     async (context, req, next) => {

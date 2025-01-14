@@ -11,18 +11,43 @@ export default defineConfig({
     // https://github.com/AztecProtocol/aztec-packages/issues/5050
     nodePolyfills({
       include: [
+        'buffer',
+        'crypto',
+        'events',
         // @ts-expect-error - fs/promises is not in the types
         'fs/promises',
-        'buffer',
-        'util',
-        'crypto',
         'path',
+        'process',
         'stream',
-        'events',
         'string_decoder',
         'tty',
+        'util',
       ],
     }),
     topLevelAwait(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes("bb-prover")) {
+            return "@aztec/bb-prover";
+          }
+        },
+      },
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@noir-lang/acvm_js", "@noir-lang/noirc_abi", "@aztec/bb-prover"],
+    esbuildOptions: {
+      supported: {
+        "top-level-await": true,
+      }
+    }
+  },
+  esbuild: {
+    supported: {
+      "top-level-await": true,
+    },
+  }
 });

@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useRef, type FC } from 'react';
 import {
-  AztecWalletRPC,
+  AztecChainWallet,
   type TransactionFunctionCall,
   type TransactionParams,
-} from '@walletmesh/aztec/rpc';
+} from '@walletmesh/aztec-rpc-wallet'
 import { getSchnorrWallet } from '@aztec/accounts/schnorr';
 import { createPXEClient, type PXE } from '@aztec/aztec.js';
 import Approve from './Approve.js';
@@ -46,7 +46,7 @@ const Wallet: FC = () => {
     if (setupDoneRef.current) return;
     setupDoneRef.current = true;
 
-    let server: AztecWalletRPC;
+    let server: AztecChainWallet;
     let pxe: PXE;
 
     const setupServer = async () => {
@@ -57,9 +57,11 @@ const Wallet: FC = () => {
         const wallet = await getSchnorrWallet(pxe, TEST_ACCOUNT_SCHNORR_ADDRESS, TEST_ACCOUNT_SCHNORR_SIGNING);
         console.debug('Wallet loaded:', wallet.getAddress().toString());
 
-        server = new AztecWalletRPC(wallet, async (_context, _request, response) => {
-          console.log('Server sending response:', response);
-          window.postMessage({ type: 'wallet_response', data: response }, '*');
+        server = new AztecChainWallet(pxe, wallet, {
+          send: async (response) => {
+            console.debug('Server sending response:', response);
+            window.postMessage({ type: 'wallet_response', data: response }, '*');
+          }
         });
 
         // Create middlewares with necessary dependencies
@@ -79,13 +81,10 @@ const Wallet: FC = () => {
     // Set up message handler
     const receiveRequest = (event: MessageEvent) => {
       if (event.source === window && event.data?.type === 'wallet_request') {
-        console.log('Processing wallet request:', event.data);
+        console.debug('Processing wallet request:', event.data);
         // Process the request
         if (server) {
-          server.receiveRequest(
-            { pxe }, // Context
-            event.data.data
-          );
+          server.receiveMessage(event.data.data);
         } else {
           console.error('Server not initialized');
         }

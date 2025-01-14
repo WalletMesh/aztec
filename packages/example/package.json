@@ -1,5 +1,5 @@
 {
-  "name": "wm-example-aztec",
+  "name": "@walletmesh/aztec-example",
   "private": true,
   "version": "0.0.8",
   "type": "module",
@@ -21,7 +21,7 @@
     "@aztec/foundation": "^0.67.1",
     "@aztec/noir-contracts.js": "^0.67.1",
     "@walletmesh/aztec": "workspace:^",
-    "@walletmesh/aztec-rpc": "workspace:^",
+    "@walletmesh/aztec-rpc-wallet": "workspace:^",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

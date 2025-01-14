@@ -1,8 +1,8 @@
-import type { AztecWalletRPCMiddleware } from '@walletmesh/aztec/rpc';
+import type { AztecChainWalletMiddleware } from '@walletmesh/aztec-rpc-wallet';
 
 export const createConnectionMiddleware = (
   isConnectedRef: React.MutableRefObject<boolean>,
-): AztecWalletRPCMiddleware => {
+): AztecChainWalletMiddleware => {
   return async (_context, req, next) => {
     if (req.method === 'aztec_connect') {
       return next();

@@ -1,29 +1,33 @@
 import React, { useState } from 'react';
-import { AztecProviderRPC } from '@walletmesh/aztec/rpc';
+import { AztecChainProvider } from '@walletmesh/aztec-rpc-wallet';
 import { AztecAddress } from '@aztec/aztec.js';
 
 import { TEST_TOKEN_CONTRACT, TEST_COUNTER_CONTRACT } from '../lib/sandbox-data';
 
 const DApp: React.FC = () => {
-  const [client, setClient] = useState<AztecProviderRPC | null>(null);
+  const [client, setClient] = useState<AztecChainProvider | null>(null);
   const [account, setAccount] = useState<string>('');
   const [isConnected, setIsConnected] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>('');
   const [counterValue, setCounterValue] = useState<string>('');
 
   const connectWallet = () => {
-    const newClient = new AztecProviderRPC(async (request) => {
-      console.log('Sending request:', request); // Debug log
-      window.postMessage({
-        type: 'wallet_request',
-        data: request,
-        origin: window.location.origin
-      }, '*');
-    });
+    const newClient = new AztecChainProvider(
+      {
+        send: async (request) => {
+          console.debug('Sending request:', request);
+          window.postMessage({
+            type: 'wallet_request',
+            data: request,
+            origin: window.location.origin
+          }, '*');
+        }
+      });
 
     const receiveResponse = (event: MessageEvent) => {
+      console.debug('Received response:', event.data.data);
       if (event.source === window && event.data?.type === 'wallet_response') {
-        newClient.receiveResponse(event.data.data);
+        newClient.receiveMessage(event.data.data);
       }
     };
 

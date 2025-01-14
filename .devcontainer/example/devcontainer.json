@@ -5,12 +5,10 @@
   "workspaceFolder": "/home/vscode/wm-aztec",
   "mounts": [
     {
-      "source": "wm-aztec-pnpm-store-${devcontainerId}",
       "target": "/home/vscode/.pnpm-store",
       "type": "volume"
     },
     {
-      "source": "wm-aztec-node-modules-${devcontainerId}",
       "target": "${containerWorkspaceFolder}/node_modules",
       "type": "volume"
     }
@@ -31,7 +29,7 @@
       "version": "20"
     },
     "ghcr.io/ClarifiedLabs/devcontainer-features/aztec-sandbox:2": {
-      "version": "0.67.1",
+      "version": "0.68.2",
       "verbose": false
     }
   },

@@ -12,6 +12,6 @@ npm install @walletmesh/aztec
 ## Usage
 
 See the documentation for the Wallet & Provider RPC library at
-[packages/rpc/README.md](https://github.com/WalletMesh/aztec/tree/main/packages/rpc#readme)
+[packages/aztec-rpc-wallet/README.md](https://github.com/WalletMesh/aztec/tree/main/packages/aztec-rpc-wallet#readme)
 and an example dApp & Wallet implementation at
-[packages/rpc/example](https://github.com/WalletMesh/aztec/tree/main/packages/example#readme).
+[packages/example](https://github.com/WalletMesh/aztec/tree/main/packages/example#readme).

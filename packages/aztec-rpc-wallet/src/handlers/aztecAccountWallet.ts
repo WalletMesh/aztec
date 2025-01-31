@@ -41,13 +41,13 @@ export const AZTEC_WALLET_METHODS: (keyof AztecWalletMethodMap)[] = [
   'aztec_getTxReceipt',
   'aztec_simulateTx',
   'aztec_simulateUnconstrained',
-  'aztec_getIncomingNotes',
+  'aztec_getNotes',
   'aztec_addNote',
   'aztec_addNullifiedNote',
-  'aztec_getUnencryptedLogs',
+  'aztec_getPublicLogs',
   'aztec_getContractClassLogs',
-  'aztec_getEncryptedEvents',
-  'aztec_getUnencryptedEvents',
+  'aztec_getPrivateEvents',
+  'aztec_getPublicEvents',
 ] as const;
 
 // Handler functions with proper type safety
@@ -331,11 +331,11 @@ async function handleGetPublicStorageAt(
   return await wallet.getPublicStorageAt(params.contract, params.storageSlot);
 }
 
-async function handleGetIncomingNotes(
+async function handleGetNotes(
   wallet: AccountWallet,
-  params: AztecWalletMethodMap['aztec_getIncomingNotes']['params'],
-): Promise<AztecWalletMethodMap['aztec_getIncomingNotes']['result']> {
-  return await wallet.getIncomingNotes(params.filter);
+  params: AztecWalletMethodMap['aztec_getNotes']['params'],
+): Promise<AztecWalletMethodMap['aztec_getNotes']['result']> {
+  return await wallet.getNotes(params.filter);
 }
 
 async function handleAddNote(
@@ -354,11 +354,11 @@ async function handleAddNullifiedNote(
   return true;
 }
 
-async function handleGetUnencryptedLogs(
+async function handleGetPublicLogs(
   wallet: AccountWallet,
-  params: AztecWalletMethodMap['aztec_getUnencryptedLogs']['params'],
-): Promise<AztecWalletMethodMap['aztec_getUnencryptedLogs']['result']> {
-  return await wallet.getUnencryptedLogs(params.filter);
+  params: AztecWalletMethodMap['aztec_getPublicLogs']['params'],
+): Promise<AztecWalletMethodMap['aztec_getPublicLogs']['result']> {
+  return await wallet.getPublicLogs(params.filter);
 }
 
 async function handleGetContractClassLogs(
@@ -368,20 +368,20 @@ async function handleGetContractClassLogs(
   return await wallet.getContractClassLogs(params.filter);
 }
 
-async function handleGetEncryptedEvents(
+async function handleGetPrivateEvents(
   wallet: AccountWallet,
-  params: AztecWalletMethodMap['aztec_getEncryptedEvents']['params'],
-): Promise<AztecWalletMethodMap['aztec_getEncryptedEvents']['result']> {
+  params: AztecWalletMethodMap['aztec_getPrivateEvents']['params'],
+): Promise<AztecWalletMethodMap['aztec_getPrivateEvents']['result']> {
   const { event, from, limit, vpks } = params;
-  return await wallet.getEncryptedEvents(event, from, limit, vpks);
+  return await wallet.getPrivateEvents(event, from, limit, vpks);
 }
 
-async function handleGetUnencryptedEvents(
+async function handleGetPublicEvents(
   wallet: AccountWallet,
-  params: AztecWalletMethodMap['aztec_getUnencryptedEvents']['params'],
-): Promise<AztecWalletMethodMap['aztec_getUnencryptedEvents']['result']> {
+  params: AztecWalletMethodMap['aztec_getPublicEvents']['params'],
+): Promise<AztecWalletMethodMap['aztec_getPublicEvents']['result']> {
   const { event, from, limit } = params;
-  return await wallet.getUnencryptedEvents(event, from, limit);
+  return await wallet.getPublicEvents(event, from, limit);
 }
 
 async function handleL1ToL2MembershipWitness(
@@ -553,11 +553,8 @@ export async function aztecWalletHandler<M extends keyof AztecWalletMethodMap>(
       );
 
     // Notes methods
-    case 'aztec_getIncomingNotes':
-      return handleGetIncomingNotes(
-        context.wallet,
-        params as AztecWalletMethodMap['aztec_getIncomingNotes']['params'],
-      );
+    case 'aztec_getNotes':
+      return handleGetNotes(context.wallet, params as AztecWalletMethodMap['aztec_getNotes']['params']);
     case 'aztec_addNote':
       return handleAddNote(context.wallet, params as AztecWalletMethodMap['aztec_addNote']['params']);
     case 'aztec_addNullifiedNote':
@@ -566,26 +563,26 @@ export async function aztecWalletHandler<M extends keyof AztecWalletMethodMap>(
         params as AztecWalletMethodMap['aztec_addNullifiedNote']['params'],
       );
 
-    // Logs methods
-    case 'aztec_getUnencryptedLogs':
-      return handleGetUnencryptedLogs(
+    // Logs and Events methods
+    case 'aztec_getPublicLogs':
+      return handleGetPublicLogs(
         context.wallet,
-        params as AztecWalletMethodMap['aztec_getUnencryptedLogs']['params'],
+        params as AztecWalletMethodMap['aztec_getPublicLogs']['params'],
       );
     case 'aztec_getContractClassLogs':
       return handleGetContractClassLogs(
         context.wallet,
         params as AztecWalletMethodMap['aztec_getContractClassLogs']['params'],
       );
-    case 'aztec_getEncryptedEvents':
-      return handleGetEncryptedEvents(
+    case 'aztec_getPrivateEvents':
+      return handleGetPrivateEvents(
         context.wallet,
-        params as AztecWalletMethodMap['aztec_getEncryptedEvents']['params'],
+        params as AztecWalletMethodMap['aztec_getPrivateEvents']['params'],
       );
-    case 'aztec_getUnencryptedEvents':
-      return handleGetUnencryptedEvents(
+    case 'aztec_getPublicEvents':
+      return handleGetPublicEvents(
         context.wallet,
-        params as AztecWalletMethodMap['aztec_getUnencryptedEvents']['params'],
+        params as AztecWalletMethodMap['aztec_getPublicEvents']['params'],
       );
     default:
       throw new AztecWalletError('invalidRequest', `Method not supported: ${String(method)}`);

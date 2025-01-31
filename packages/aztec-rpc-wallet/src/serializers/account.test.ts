@@ -7,14 +7,14 @@ import {
   aztecGetAuthWitnessSerializer,
 } from './account.js';
 import { decodeBase64 } from './types.js';
-import { frSerializer } from './core.js';
+import { schemas } from '@aztec/foundation/schemas';
 
 describe('Account Serializers', () => {
   describe('aztec_setScopes', () => {
     const METHOD = 'aztec_setScopes';
 
-    it('should serialize and deserialize params', () => {
-      const scopes = [AztecAddress.random(), AztecAddress.random()];
+    it('should serialize and deserialize params', async () => {
+      const scopes = [await AztecAddress.random(), await AztecAddress.random()];
       const params = { scopes };
 
       const serialized = aztecSetScopesSerializer.params.serialize(METHOD, params);
@@ -38,9 +38,9 @@ describe('Account Serializers', () => {
   describe('aztec_registerAccount', () => {
     const METHOD = 'aztec_registerAccount';
 
-    it('should serialize and deserialize params', () => {
-      const secretKey = Fr.random();
-      const partialAddress = Fr.random();
+    it('should serialize and deserialize params', async () => {
+      const secretKey = await Fr.random();
+      const partialAddress = await Fr.random();
       const params = { secretKey, partialAddress };
 
       const serialized = aztecRegisterAccountSerializer.params.serialize(METHOD, params);
@@ -51,8 +51,8 @@ describe('Account Serializers', () => {
       expect(deserialized.partialAddress.toString()).toBe(partialAddress.toString());
     });
 
-    it('should serialize and deserialize result', () => {
-      const result = CompleteAddress.random();
+    it('should serialize and deserialize result', async () => {
+      const result = await CompleteAddress.random();
 
       const serialized = aztecRegisterAccountSerializer.result.serialize(METHOD, result);
       expect(serialized.method).toBe(METHOD);
@@ -65,8 +65,8 @@ describe('Account Serializers', () => {
   describe('aztec_addAuthWitness', () => {
     const METHOD = 'aztec_addAuthWitness';
 
-    it('should serialize and deserialize params', () => {
-      const authWitness = AuthWitness.random();
+    it('should serialize and deserialize params', async () => {
+      const authWitness = await AuthWitness.random();
       const params = { authWitness };
 
       const serialized = aztecAddAuthWitnessSerializer.params.serialize(METHOD, params);
@@ -90,8 +90,8 @@ describe('Account Serializers', () => {
   describe('aztec_getAuthWitness', () => {
     const METHOD = 'aztec_getAuthWitness';
 
-    it('should serialize and deserialize params', () => {
-      const messageHash = Fr.random();
+    it('should serialize and deserialize params', async () => {
+      const messageHash = await Fr.random();
       const params = { messageHash };
 
       const serialized = aztecGetAuthWitnessSerializer.params.serialize(METHOD, params);
@@ -101,8 +101,8 @@ describe('Account Serializers', () => {
       expect(deserialized.messageHash.toString()).toBe(messageHash.toString());
     });
 
-    it('should serialize and deserialize result', () => {
-      const result = [Fr.random(), Fr.random()];
+    it('should serialize and deserialize result', async () => {
+      const result = [await Fr.random(), await Fr.random()];
 
       const serialized = aztecGetAuthWitnessSerializer.result.serialize(METHOD, result);
       expect(serialized.method).toBe(METHOD);
@@ -113,12 +113,13 @@ describe('Account Serializers', () => {
   });
 
   describe('Base64 encoding/decoding', () => {
-    it('should properly encode and decode data', () => {
-      const messageHash = Fr.random();
+    it('should properly encode and decode data', async () => {
+      const messageHash = await Fr.random();
+
       const serialized = aztecGetAuthWitnessSerializer.params.serialize('aztec_getAuthWitness', {
         messageHash,
       });
-      const decoded = frSerializer.deserialize(decodeBase64(serialized.serialized));
+      const decoded = schemas.Fr.parse(JSON.parse(serialized.serialized));
       expect(decoded.toString()).toBe(messageHash.toString());
     });
   });

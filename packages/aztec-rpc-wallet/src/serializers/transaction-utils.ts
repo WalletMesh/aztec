@@ -1,237 +1,161 @@
-import { PrivateExecutionResult, TxProvingResult } from '@aztec/circuit-types';
-import type {
-  CountedContractClassLog,
-  CountedPublicExecutionRequest,
-  NoteAndSlot,
-  PublicExecutionRequest,
-} from '@aztec/circuit-types';
-import type {
-  ClientIvcProof,
-  PrivateCircuitPublicInputs,
-  PrivateKernelTailCircuitPublicInputs,
-} from '@aztec/circuits.js';
-import { Fr } from '@aztec/aztec.js';
+/**
+ * @module transaction-utils
+ * Utilities for serializing and deserializing Aztec transaction execution requests.
+ * These utilities handle the conversion between native Aztec types and JSON-RPC compatible formats.
+ */
+
+import { HashedValues, FunctionCall, AuthWitness } from '@aztec/circuit-types';
+import { AztecAddress, Fr, FunctionSelector, GasSettings } from '@aztec/circuits.js';
+import type { FunctionType, AbiType } from '@aztec/foundation/abi';
+import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
+import { NoFeePaymentMethod } from '@aztec/aztec.js';
 
 /**
- * Interface representing the serialized form of a private execution result.
- * Contains all data needed to reconstruct a PrivateExecutionResult instance.
+ * Interface representing the serialized form of a function call.
+ * This structure maps the native FunctionCall type to a JSON-serializable format
+ * where complex Aztec types are converted to strings.
+ *
+ * @property name - The name of the function being called
+ * @property to - The target contract address as a string
+ * @property selector - The function selector as a string
+ * @property type - The function type (public/private)
+ * @property isStatic - Whether the function is static (read-only)
+ * @property args - Array of function arguments as strings
+ * @property returnTypes - Array of return type definitions
  */
-interface SerializedPrivateExecutionResultData {
-  acir: string;
-  vk: string;
-  partialWitness: [number, string][];
-  publicInputs: PrivateCircuitPublicInputs;
-  noteHashLeafIndexMap: [string, string][];
-  newNotes: NoteAndSlot[];
-  noteHashNullifierCounterMap: [number, number][];
-  returnValues: string[];
-  nestedExecutions: SerializedPrivateExecutionResultData[];
-  enqueuedPublicFunctionCalls: CountedPublicExecutionRequest[];
-  publicTeardownFunctionCall: PublicExecutionRequest;
-  contractClassLogs: CountedContractClassLog[];
+interface SerializedFunctionCall {
+  name: string;
+  to: string;
+  selector: string;
+  type: FunctionType;
+  isStatic: boolean;
+  args: string[];
+  returnTypes: AbiType[];
 }
 
 /**
- * Extends PrivateExecutionResult to add serialization capabilities.
- * Provides methods to convert private execution results to/from JSON format for RPC transport.
+ * Interface representing the serialized form of an execution request initialization.
+ * This structure maps the ExecutionRequestInit type to a JSON-serializable format
+ * where complex Aztec types are converted to strings.
+ *
+ * @property calls - Array of serialized function calls
+ * @property authWitnesses - Optional array of authentication witness strings
+ * @property hashedArguments - Optional array of hashed argument values as base64 strings
+ * @property fee - Fee settings including gas configuration
+ * @property nonce - Optional transaction nonce as a string
+ * @property cancellable - Optional flag indicating if the transaction can be cancelled
  */
-export class SerializablePrivateExecutionResult extends PrivateExecutionResult {
-  /**
-   * Creates a SerializablePrivateExecutionResult from a PrivateExecutionResult instance.
-   * @param result - The PrivateExecutionResult to convert
-   * @returns A new SerializablePrivateExecutionResult instance
-   */
-  static from(result: PrivateExecutionResult): SerializablePrivateExecutionResult {
-    return new SerializablePrivateExecutionResult(
-      result.acir,
-      result.vk,
-      result.partialWitness,
-      result.publicInputs,
-      result.noteHashLeafIndexMap,
-      result.newNotes,
-      result.noteHashNullifierCounterMap,
-      result.returnValues,
-      result.nestedExecutions,
-      result.enqueuedPublicFunctionCalls,
-      result.publicTeardownFunctionCall,
-      result.contractClassLogs,
-    );
-  }
-
-  /**
-   * Converts the execution result to a JSON-serializable format.
-   * Handles conversion of complex types like Buffers, Maps, and nested execution results.
-   * @returns The serialized execution result data
-   */
-  toJSON(): SerializedPrivateExecutionResultData {
-    return {
-      acir: this.acir.toString('base64'),
-      vk: this.vk.toString('base64'),
-      partialWitness: Array.from(this.partialWitness.entries()),
-      publicInputs: this.publicInputs,
-      noteHashLeafIndexMap: Array.from(this.noteHashLeafIndexMap.entries()).map(([k, v]) => [
-        k.toString(),
-        v.toString(),
-      ]),
-      newNotes: this.newNotes,
-      noteHashNullifierCounterMap: Array.from(this.noteHashNullifierCounterMap.entries()),
-      returnValues: this.returnValues.map((fr: Fr) => fr.toString()),
-      nestedExecutions: this.nestedExecutions.map((exec: PrivateExecutionResult) =>
-        exec instanceof SerializablePrivateExecutionResult
-          ? exec.toJSON()
-          : new SerializablePrivateExecutionResult(
-              exec.acir,
-              exec.vk,
-              exec.partialWitness,
-              exec.publicInputs,
-              exec.noteHashLeafIndexMap,
-              exec.newNotes,
-              exec.noteHashNullifierCounterMap,
-              exec.returnValues,
-              exec.nestedExecutions,
-              exec.enqueuedPublicFunctionCalls,
-              exec.publicTeardownFunctionCall,
-              exec.contractClassLogs,
-            ).toJSON(),
-      ),
-      enqueuedPublicFunctionCalls: this.enqueuedPublicFunctionCalls,
-      publicTeardownFunctionCall: this.publicTeardownFunctionCall,
-      contractClassLogs: this.contractClassLogs,
-    };
-  }
-
-  /**
-   * Creates a SerializablePrivateExecutionResult from JSON data.
-   * @param json - JSON string or pre-parsed data object
-   * @returns A new SerializablePrivateExecutionResult instance
-   */
-  static fromJSON(json: string | SerializedPrivateExecutionResultData): SerializablePrivateExecutionResult {
-    const data: SerializedPrivateExecutionResultData = typeof json === 'string' ? JSON.parse(json) : json;
-
-    return new SerializablePrivateExecutionResult(
-      Buffer.from(data.acir, 'base64'),
-      Buffer.from(data.vk, 'base64'),
-      new Map(data.partialWitness),
-      data.publicInputs,
-      new Map(data.noteHashLeafIndexMap.map(([k, v]) => [BigInt(k), BigInt(v)])),
-      data.newNotes,
-      new Map(data.noteHashNullifierCounterMap),
-      data.returnValues.map((str: string) => Fr.fromString(str)),
-      data.nestedExecutions.map((exec: SerializedPrivateExecutionResultData) =>
-        SerializablePrivateExecutionResult.fromJSON(exec),
-      ),
-      data.enqueuedPublicFunctionCalls,
-      data.publicTeardownFunctionCall,
-      data.contractClassLogs,
-    );
-  }
-
-  /**
-   * Compares this execution result with another for equality.
-   * @param other - The execution result to compare against
-   * @returns True if the execution results are equivalent
-   */
-  equals(other: PrivateExecutionResult): boolean {
-    const thisJson = JSON.stringify(SerializablePrivateExecutionResult.from(this).toJSON());
-    const otherJson = JSON.stringify(SerializablePrivateExecutionResult.from(other).toJSON());
-    return thisJson === otherJson;
-  }
-
-  toComparable(): SerializedPrivateExecutionResultData {
-    return JSON.parse(JSON.stringify(this.toJSON()));
-  }
+interface SerializedExecutionRequestInit {
+  calls: SerializedFunctionCall[];
+  authWitnesses?: string[];
+  hashedArguments?: string[];
+  fee: {
+    gasSettings: string;
+  };
+  nonce?: string;
+  cancellable?: boolean;
 }
 
 /**
- * Interface representing the serialized form of a transaction proving result.
- * Contains the private execution result, public inputs, and client IVC proof.
+ * Serializes an ExecutionRequestInit object to a string for JSON-RPC transport.
+ * This function converts a native Aztec transaction execution request into a format
+ * that can be safely transmitted over JSON-RPC, handling the conversion of complex
+ * types like addresses, field elements, and function selectors to strings.
+ *
+ * Note: The fee payment method is not serialized as it contains async methods.
+ * The deserializer will use a default NoFeePaymentMethod which should be replaced
+ * by the caller with an appropriate implementation.
+ *
+ * @param init - The ExecutionRequestInit object to serialize, containing:
+ *               - calls: Array of function calls to execute
+ *               - fee: Gas settings and payment method
+ *               - authWitnesses: Optional authentication proofs
+ *               - hashedArguments: Optional pre-hashed arguments
+ *               - nonce: Optional transaction nonce
+ *               - cancellable: Optional cancellation flag
+ * @returns A JSON string representation of the serialized data, with all complex
+ *          Aztec types converted to string representations
+ * @throws If any of the complex types cannot be serialized
  */
-interface SerializedTxProvingResultData {
-  privateExecutionResult: ReturnType<SerializablePrivateExecutionResult['toJSON']>;
-  publicInputs: PrivateKernelTailCircuitPublicInputs;
-  clientIvcProof: ClientIvcProof;
+export function serializeExecutionRequestInit(init: ExecutionRequestInit): string {
+  const serialized: SerializedExecutionRequestInit = {
+    calls: init.calls.map((call) => ({
+      name: call.name,
+      to: call.to.toString(),
+      selector: call.selector.toString(),
+      type: call.type,
+      isStatic: call.isStatic,
+      args: call.args.map((arg) => arg.toString()),
+      returnTypes: call.returnTypes,
+    })),
+    fee: {
+      gasSettings: init.fee.gasSettings.toBuffer().toString('base64'),
+    },
+  };
+
+  if (init.authWitnesses) {
+    serialized.authWitnesses = init.authWitnesses.map((w) => w.toString());
+  }
+
+  if (init.hashedArguments) {
+    serialized.hashedArguments = init.hashedArguments.map((ha) => ha.toBuffer().toString('base64'));
+  }
+
+  if (init.nonce) {
+    serialized.nonce = init.nonce.toString();
+  }
+
+  if (init.cancellable !== undefined) {
+    serialized.cancellable = init.cancellable;
+  }
+
+  return JSON.stringify(serialized);
 }
 
 /**
- * Extends TxProvingResult to add serialization capabilities.
- * Provides methods to convert transaction proving results to/from JSON format for RPC transport.
+ * Deserializes a string into an ExecutionRequestInit object for use in the Aztec protocol.
+ * This function reconstructs a native Aztec transaction execution request from its
+ * JSON-RPC serialized form, converting string representations back into their
+ * appropriate Aztec types.
+ *
+ * Note: A default NoFeePaymentMethod is used for the fee payment method.
+ * The caller should override this with the appropriate implementation based on
+ * their fee payment requirements.
+ *
+ * @param data - The serialized string data containing:
+ *               - calls: Array of serialized function calls
+ *               - fee: Serialized gas settings
+ *               - authWitnesses: Optional serialized authentication proofs
+ *               - hashedArguments: Optional serialized hashed arguments
+ *               - nonce: Optional serialized nonce
+ *               - cancellable: Optional cancellation flag
+ * @returns The deserialized ExecutionRequestInit object with all string representations
+ *          converted back to their native Aztec types
+ * @throws If any of the serialized data cannot be properly deserialized into valid Aztec types
  */
-export class SerializableTxProvingResult extends TxProvingResult {
-  /**
-   * Creates a SerializableTxProvingResult from a TxProvingResult instance.
-   * @param result - The TxProvingResult to convert
-   * @returns A new SerializableTxProvingResult instance
-   */
-  static from(result: TxProvingResult): SerializableTxProvingResult {
-    return new SerializableTxProvingResult(
-      result.privateExecutionResult,
-      result.publicInputs,
-      result.clientIvcProof,
-    );
-  }
+export function deserializeExecutionRequestInit(data: string): ExecutionRequestInit {
+  const parsed: SerializedExecutionRequestInit = JSON.parse(data);
 
-  /**
-   * Converts the proving result to a JSON-serializable format.
-   * @returns The serialized proving result data
-   */
-  toJSON(): SerializedTxProvingResultData {
-    return {
-      privateExecutionResult: SerializablePrivateExecutionResult.from(this.privateExecutionResult).toJSON(),
-      publicInputs: this.publicInputs,
-      clientIvcProof: this.clientIvcProof,
-    };
-  }
-
-  /**
-   * Creates a SerializableTxProvingResult from JSON data.
-   * @param json - JSON string or pre-parsed data object
-   * @returns A new SerializableTxProvingResult instance
-   */
-  static fromJSON(json: string | SerializedTxProvingResultData): SerializableTxProvingResult {
-    const data: SerializedTxProvingResultData = typeof json === 'string' ? JSON.parse(json) : json;
-
-    return new SerializableTxProvingResult(
-      SerializablePrivateExecutionResult.fromJSON(data.privateExecutionResult),
-      data.publicInputs,
-      data.clientIvcProof,
-    );
-  }
-
-  /**
-   * Compares this proving result with another for equality.
-   * @param other - The proving result to compare against
-   * @returns True if the proving results are equivalent
-   */
-  equals(other: TxProvingResult): boolean {
-    const thisJson = JSON.stringify(SerializableTxProvingResult.from(this).toJSON());
-    const otherJson = JSON.stringify(SerializableTxProvingResult.from(other).toJSON());
-    return thisJson === otherJson;
-  }
-
-  toComparable(): SerializedTxProvingResultData {
-    return JSON.parse(JSON.stringify(this.toJSON()));
-  }
-}
-
-/**
- * Utility function to compare two PrivateExecutionResult instances for equality.
- * @param a - First execution result
- * @param b - Second execution result
- * @returns True if the execution results are equivalent
- */
-export function comparePrivateExecutionResults(
-  a: PrivateExecutionResult,
-  b: PrivateExecutionResult,
-): boolean {
-  return SerializablePrivateExecutionResult.from(a).equals(b);
-}
-
-/**
- * Utility function to compare two TxProvingResult instances for equality.
- * @param a - First proving result
- * @param b - Second proving result
- * @returns True if the proving results are equivalent
- */
-export function compareTxProvingResults(a: TxProvingResult, b: TxProvingResult): boolean {
-  return SerializableTxProvingResult.from(a).equals(b);
+  return {
+    calls: parsed.calls.map(
+      (call) =>
+        new FunctionCall(
+          call.name,
+          AztecAddress.fromString(call.to),
+          FunctionSelector.fromString(call.selector),
+          call.type,
+          call.isStatic,
+          call.args.map((arg) => Fr.fromString(arg)),
+          call.returnTypes,
+        ),
+    ),
+    fee: {
+      gasSettings: GasSettings.fromBuffer(Buffer.from(parsed.fee.gasSettings, 'base64')),
+      paymentMethod: new NoFeePaymentMethod(), // Default, caller should override
+    },
+    authWitnesses: parsed.authWitnesses?.map((w) => AuthWitness.fromString(w)),
+    hashedArguments: parsed.hashedArguments?.map((ha) => HashedValues.fromBuffer(Buffer.from(ha, 'base64'))),
+    nonce: parsed.nonce ? Fr.fromString(parsed.nonce) : undefined,
+    cancellable: parsed.cancellable,
+  };
 }

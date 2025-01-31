@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { AztecWalletSerializer } from './index.js';
 import { AztecAddress, Tx } from '@aztec/aztec.js';
 import type { JSONRPCSerializer } from './types.js';
+import type { AztecWalletMethodMap } from '../types.js';
 
 describe('AztecWalletSerializer', () => {
   // Test known method (using aztec_setScopes as an example)
@@ -14,8 +15,8 @@ describe('AztecWalletSerializer', () => {
   const resultSerializer = (AztecWalletSerializer as Required<JSONRPCSerializer<unknown, unknown>>).result;
 
   describe('params', () => {
-    it('should serialize params for known methods', () => {
-      const params = { scopes: [AztecAddress.random()] };
+    it('should serialize params for known methods', async () => {
+      const params = { scopes: [await AztecAddress.random()] };
       const result = AztecWalletSerializer.params.serialize(knownMethod, params);
       expect(result).toBeDefined();
       expect(result.method).toBe(knownMethod);
@@ -97,26 +98,37 @@ describe('AztecWalletSerializer', () => {
   });
 
   describe('integration', () => {
-    it('should handle contract methods', () => {
+    it('should handle contract methods', async () => {
       const method = 'aztec_getContractInstance';
-      const params = { address: AztecAddress.random() };
+      const params = { address: await AztecAddress.random() };
 
       const serializedParams = AztecWalletSerializer.params.serialize(method, params);
       expect(serializedParams).toBeDefined();
       expect(serializedParams.method).toBe(method);
       expect(typeof serializedParams.serialized).toBe('string');
+
+      const deserializedParams = AztecWalletSerializer.params.deserialize(
+        method,
+        serializedParams,
+      ) as AztecWalletMethodMap['aztec_getContractInstance']['params'];
+      expect(deserializedParams.address.toString()).toBe(params.address.toString());
     });
 
-    it('should handle transaction methods', () => {
+    it('should handle transaction methods', async () => {
       const method = 'aztec_sendTx';
-      const params = {
-        tx: Tx.random(),
-      };
+      const tx = await Tx.random();
+      const params = { tx };
 
       const serializedParams = AztecWalletSerializer.params.serialize(method, params);
       expect(serializedParams).toBeDefined();
       expect(serializedParams.method).toBe(method);
       expect(typeof serializedParams.serialized).toBe('string');
+
+      const deserializedParams = AztecWalletSerializer.params.deserialize(
+        method,
+        serializedParams,
+      ) as AztecWalletMethodMap['aztec_sendTx']['params'];
+      expect(deserializedParams.tx.toBuffer().toString('hex')).toBe(tx.toBuffer().toString('hex'));
     });
   });
 });

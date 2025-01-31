@@ -62,13 +62,13 @@ describe('Aztec Account Wallet Handler', () => {
       getTxReceipt: vi.fn(),
       simulateTx: vi.fn(),
       simulateUnconstrained: vi.fn(),
-      getIncomingNotes: vi.fn(),
+      getNotes: vi.fn(),
       addNote: vi.fn(),
       addNullifiedNote: vi.fn(),
-      getUnencryptedLogs: vi.fn(),
+      getPublicLogs: vi.fn(),
       getContractClassLogs: vi.fn(),
-      getEncryptedEvents: vi.fn(),
-      getUnencryptedEvents: vi.fn(),
+      getPrivateEvents: vi.fn(),
+      getPublicEvents: vi.fn(),
       getL1ToL2MembershipWitness: vi.fn(),
     } as unknown as AccountWallet;
 
@@ -118,7 +118,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Scope Methods', () => {
     it('handles aztec_setScopes', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       const scopes = [mockAddress];
       wallet.setScopes = vi.fn().mockResolvedValue(undefined);
 
@@ -128,7 +128,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_getScopes', async () => {
-      const scopes = [AztecAddress.random(), AztecAddress.random()];
+      const scopes = [await AztecAddress.random(), await AztecAddress.random()];
       wallet.getScopes = vi.fn().mockResolvedValue(scopes);
 
       const result = await aztecWalletHandler(context, 'aztec_getScopes', {});
@@ -145,7 +145,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Account Methods', () => {
     it('handles aztec_getAddress', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       wallet.getAddress = vi.fn().mockReturnValue(mockAddress);
 
       const result = await aztecWalletHandler(context, 'aztec_getAddress', {});
@@ -154,8 +154,8 @@ describe('Aztec Account Wallet Handler', () => {
 
     it('handles aztec_getCompleteAddress', async () => {
       const mockAddress = {
-        address: AztecAddress.random(),
-        publicKey: AztecAddress.random(),
+        address: await AztecAddress.random(),
+        publicKey: await AztecAddress.random(),
       };
       wallet.getCompleteAddress = vi.fn().mockReturnValue(mockAddress);
 
@@ -194,7 +194,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('L1->L2 Message Methods', () => {
     it('handles aztec_isL1ToL2MessageSynced', async () => {
-      const mockMessage = Fr.random();
+      const mockMessage = await Fr.random();
       wallet.isL1ToL2MessageSynced = vi.fn().mockResolvedValue(true);
 
       const result = await aztecWalletHandler(context, 'aztec_isL1ToL2MessageSynced', {
@@ -205,9 +205,9 @@ describe('Aztec Account Wallet Handler', () => {
 
     it('handles aztec_getL1ToL2MembershipWitness', async () => {
       const mockParams = {
-        contractAddress: AztecAddress.random(),
-        messageHash: Fr.random(),
-        secret: Fr.random(),
+        contractAddress: await AztecAddress.random(),
+        messageHash: await Fr.random(),
+        secret: await Fr.random(),
       };
       const mockWitness = { witness: new Uint8Array([1, 2, 3]) };
       wallet.getL1ToL2MembershipWitness = vi.fn().mockResolvedValue(mockWitness);
@@ -223,17 +223,19 @@ describe('Aztec Account Wallet Handler', () => {
   });
 
   describe('Note Methods', () => {
-    it('handles aztec_getIncomingNotes', async () => {
-      const mockFilter = { contractAddress: AztecAddress.random() };
-      const mockNotes = [ExtendedNote.random()];
-      wallet.getIncomingNotes = vi.fn().mockResolvedValue(mockNotes);
+    it('handles aztec_getNotes', async () => {
+      const mockFilter = { contractAddress: await AztecAddress.random() };
+      const mockNote = await ExtendedNote.random();
+      const mockNotes = [mockNote];
+      wallet.getNotes = vi.fn().mockResolvedValue(mockNotes);
 
-      const result = await aztecWalletHandler(context, 'aztec_getIncomingNotes', { filter: mockFilter });
+      const result = await aztecWalletHandler(context, 'aztec_getNotes', { filter: mockFilter });
       expect(result).toBe(mockNotes);
+      expect(wallet.getNotes).toHaveBeenCalledWith(mockFilter);
     });
 
     it('handles aztec_addNote', async () => {
-      const mockNote = ExtendedNote.random();
+      const mockNote = await ExtendedNote.random();
       wallet.addNote = vi.fn().mockResolvedValue(undefined);
 
       const result = await aztecWalletHandler(context, 'aztec_addNote', { note: mockNote });
@@ -242,7 +244,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_addNullifiedNote', async () => {
-      const mockNote = ExtendedNote.random();
+      const mockNote = await ExtendedNote.random();
       Object.assign(mockNote, { nullified: true });
       wallet.addNullifiedNote = vi.fn().mockResolvedValue(undefined);
 
@@ -254,7 +256,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Contract Methods', () => {
     it('handles aztec_getContractInstance', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       const mockInstance = {
         address: mockAddress,
         toString: () => mockAddress.toString(),
@@ -268,14 +270,14 @@ describe('Aztec Account Wallet Handler', () => {
     it('throws error when contract instance not found', async () => {
       wallet.getContractInstance = vi.fn().mockResolvedValue(null);
 
-      const testAddress = AztecAddress.random();
+      const testAddress = await AztecAddress.random();
       await expect(
         aztecWalletHandler(context, 'aztec_getContractInstance', { address: testAddress }),
       ).rejects.toThrow(AztecWalletError);
     });
 
     it('handles aztec_getContractClass', async () => {
-      const mockId = Fr.random();
+      const mockId = await Fr.random();
       const mockContractClass = { id: mockId };
       wallet.getContractClass = vi.fn().mockResolvedValue(mockContractClass);
 
@@ -285,7 +287,7 @@ describe('Aztec Account Wallet Handler', () => {
 
     it('throws error when contract class not found', async () => {
       wallet.getContractClass = vi.fn().mockResolvedValue(null);
-      const mockId = Fr.random();
+      const mockId = await Fr.random();
 
       await expect(aztecWalletHandler(context, 'aztec_getContractClass', { id: mockId })).rejects.toThrow(
         AztecWalletError,
@@ -293,7 +295,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_getContractArtifact', async () => {
-      const mockId = Fr.random();
+      const mockId = await Fr.random();
       const mockArtifact = { id: mockId, name: 'TestContract' };
       wallet.getContractArtifact = vi.fn().mockResolvedValue(mockArtifact);
 
@@ -303,7 +305,7 @@ describe('Aztec Account Wallet Handler', () => {
 
     it('throws error when contract artifact not found', async () => {
       wallet.getContractArtifact = vi.fn().mockResolvedValue(null);
-      const mockId = Fr.random();
+      const mockId = await Fr.random();
 
       await expect(aztecWalletHandler(context, 'aztec_getContractArtifact', { id: mockId })).rejects.toThrow(
         AztecWalletError,
@@ -311,7 +313,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_isContractClassPubliclyRegistered', async () => {
-      const mockId = Fr.random();
+      const mockId = await Fr.random();
       wallet.isContractClassPubliclyRegistered = vi.fn().mockResolvedValue(true);
 
       const result = await aztecWalletHandler(context, 'aztec_isContractClassPubliclyRegistered', {
@@ -321,7 +323,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_isContractPubliclyDeployed', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       wallet.isContractPubliclyDeployed = vi.fn().mockResolvedValue(true);
 
       const result = await aztecWalletHandler(context, 'aztec_isContractPubliclyDeployed', {
@@ -331,7 +333,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_isContractInitialized', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       wallet.isContractInitialized = vi.fn().mockResolvedValue(true);
 
       const result = await aztecWalletHandler(context, 'aztec_isContractInitialized', {
@@ -341,7 +343,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_registerContract', async () => {
-      const mockAddress = AztecAddress.random();
+      const mockAddress = await AztecAddress.random();
       const mockPublicKeys = {
         masterNullifierPublicKey: new Fr(1),
         masterIncomingViewingPublicKey: new Fr(2),
@@ -403,17 +405,18 @@ describe('Aztec Account Wallet Handler', () => {
   });
 
   describe('Log Methods', () => {
-    it('handles aztec_getUnencryptedLogs', async () => {
-      const mockFilter = { contractAddress: AztecAddress.random() };
+    it('handles aztec_getPublicLogs', async () => {
+      const mockFilter = { contractAddress: await AztecAddress.random() };
       const mockLogs = [{ data: new Uint8Array([1, 2, 3]) }];
-      wallet.getUnencryptedLogs = vi.fn().mockResolvedValue(mockLogs);
+      wallet.getPublicLogs = vi.fn().mockResolvedValue(mockLogs);
 
-      const result = await aztecWalletHandler(context, 'aztec_getUnencryptedLogs', { filter: mockFilter });
+      const result = await aztecWalletHandler(context, 'aztec_getPublicLogs', { filter: mockFilter });
       expect(result).toBe(mockLogs);
+      expect(wallet.getPublicLogs).toHaveBeenCalledWith(mockFilter);
     });
 
     it('handles aztec_getContractClassLogs', async () => {
-      const mockFilter = { contractAddress: AztecAddress.random() };
+      const mockFilter = { contractAddress: await AztecAddress.random() };
       const mockLogs = [{ data: new Uint8Array([1, 2, 3]) }];
       wallet.getContractClassLogs = vi.fn().mockResolvedValue(mockLogs);
 
@@ -421,12 +424,12 @@ describe('Aztec Account Wallet Handler', () => {
       expect(result).toBe(mockLogs);
     });
 
-    it('handles aztec_getEncryptedEvents', async () => {
+    it('handles aztec_getPrivateEvents', async () => {
       const mockEvent = {
         name: 'TestEvent',
         parameters: [{ name: 'value', type: 'field' }],
         returnType: { type: 'struct', items: [{ name: 'value', type: 'field' }] },
-        eventSelector: EventSelector.random(),
+        eventSelector: await EventSelector.random(),
         abiType: 'event',
         fieldNames: ['value'],
       } as unknown as EventMetadataDefinition;
@@ -434,14 +437,14 @@ describe('Aztec Account Wallet Handler', () => {
         event: mockEvent,
         from: 0,
         limit: 10,
-        vpks: [Point.random()],
+        vpks: [await Point.random()],
       };
       const mockEvents = [{ data: new Uint8Array([1, 2, 3]) }];
-      wallet.getEncryptedEvents = vi.fn().mockResolvedValue(mockEvents);
+      wallet.getPrivateEvents = vi.fn().mockResolvedValue(mockEvents);
 
-      const result = await aztecWalletHandler(context, 'aztec_getEncryptedEvents', mockParams);
+      const result = await aztecWalletHandler(context, 'aztec_getPrivateEvents', mockParams);
       expect(result).toBe(mockEvents);
-      expect(wallet.getEncryptedEvents).toHaveBeenCalledWith(
+      expect(wallet.getPrivateEvents).toHaveBeenCalledWith(
         mockParams.event,
         mockParams.from,
         mockParams.limit,
@@ -449,12 +452,12 @@ describe('Aztec Account Wallet Handler', () => {
       );
     });
 
-    it('handles aztec_getUnencryptedEvents', async () => {
+    it('handles aztec_getPublicEvents', async () => {
       const mockEvent = {
         name: 'TestEvent',
         parameters: [{ name: 'value', type: 'field' }],
         returnType: { type: 'struct', items: [{ name: 'value', type: 'field' }] },
-        eventSelector: EventSelector.random(),
+        eventSelector: await EventSelector.random(),
         abiType: 'event',
         fieldNames: ['value'],
       } as unknown as EventMetadataDefinition;
@@ -464,11 +467,11 @@ describe('Aztec Account Wallet Handler', () => {
         limit: 10,
       };
       const mockEvents = [{ data: new Uint8Array([1, 2, 3]) }];
-      wallet.getUnencryptedEvents = vi.fn().mockResolvedValue(mockEvents);
+      wallet.getPublicEvents = vi.fn().mockResolvedValue(mockEvents);
 
-      const result = await aztecWalletHandler(context, 'aztec_getUnencryptedEvents', mockParams);
+      const result = await aztecWalletHandler(context, 'aztec_getPublicEvents', mockParams);
       expect(result).toBe(mockEvents);
-      expect(wallet.getUnencryptedEvents).toHaveBeenCalledWith(
+      expect(wallet.getPublicEvents).toHaveBeenCalledWith(
         mockParams.event,
         mockParams.from,
         mockParams.limit,
@@ -478,7 +481,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Transaction Methods', () => {
     it('handles aztec_getTxReceipt', async () => {
-      const mockTxHash = TxHash.random();
+      const mockTxHash = await TxHash.random();
       const mockReceipt = { status: 1 };
       wallet.getTxReceipt = vi.fn().mockResolvedValue(mockReceipt);
 
@@ -489,7 +492,7 @@ describe('Aztec Account Wallet Handler', () => {
     it('throws error when transaction receipt not found', async () => {
       wallet.getTxReceipt = vi.fn().mockResolvedValue(null);
 
-      const mockTxHash = TxHash.random();
+      const mockTxHash = await TxHash.random();
       await expect(aztecWalletHandler(context, 'aztec_getTxReceipt', { txHash: mockTxHash })).rejects.toThrow(
         AztecWalletError,
       );
@@ -498,27 +501,27 @@ describe('Aztec Account Wallet Handler', () => {
     it('handles aztec_simulateTx', async () => {
       const mockParams = {
         txRequest: {
-          origin: AztecAddress.random(),
+          origin: await AztecAddress.random(),
           functionSelector: new Fr(1),
           firstCallArgsHash: new Fr(2),
           txContext: {
             chainId: 1,
             version: 1,
             protocolVersion: 1,
-            excessFeeReceiver: AztecAddress.random(),
+            excessFeeReceiver: await AztecAddress.random(),
           },
           callData: new Uint8Array(),
           gasLimit: 1000000n,
           gasPrice: 1000000n,
-          storageContractAddress: AztecAddress.random(),
-          portalContract: AztecAddress.random(),
+          storageContractAddress: await AztecAddress.random(),
+          portalContract: await AztecAddress.random(),
           argsOfCalls: [],
           authWitnesses: [],
           toTxRequest: () => ({ id: '0x123' }),
           toBuffer: () => new Uint8Array(),
         } as unknown as TxExecutionRequest,
         simulatePublic: true,
-        msgSender: AztecAddress.random(),
+        msgSender: await AztecAddress.random(),
         skipTxValidation: false,
         enforceFeePayment: true,
         profile: true,
@@ -541,7 +544,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Capsule Methods', () => {
     it('handles aztec_addCapsule', async () => {
-      const mockCapsule = [Fr.random(), Fr.random(), Fr.random()];
+      const mockCapsule = [await Fr.random(), await Fr.random(), await Fr.random()];
       wallet.addCapsule = vi.fn().mockResolvedValue(undefined);
 
       const result = await aztecWalletHandler(context, 'aztec_addCapsule', { capsule: mockCapsule });
@@ -553,7 +556,7 @@ describe('Aztec Account Wallet Handler', () => {
   describe('Auth Witness Methods', () => {
     it('handles aztec_addAuthWitness', async () => {
       const mockAuthWitness = {
-        requestHash: Fr.random(),
+        requestHash: await Fr.random(),
         witness: new Uint8Array([1, 2, 3]),
         toJSON: () => ({}),
         toBuffer: () => new Uint8Array([1, 2, 3]),
@@ -568,7 +571,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_createAuthWit', async () => {
-      const mockIntent = Fr.random() as unknown as IntentAction | IntentInnerHash;
+      const mockIntent = (await Fr.random()) as unknown as IntentAction | IntentInnerHash;
       const mockAuthWit = { witness: new Uint8Array([4, 5, 6]) };
       wallet.createAuthWit = vi.fn().mockResolvedValue(mockAuthWit);
 
@@ -580,7 +583,7 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Sender Methods', () => {
     it('handles aztec_registerSender', async () => {
-      const mockSender = AztecAddress.random();
+      const mockSender = await AztecAddress.random();
       const mockResult = { success: true };
       wallet.registerSender = vi.fn().mockResolvedValue(mockResult);
 
@@ -590,7 +593,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_removeSender', async () => {
-      const mockSender = AztecAddress.random();
+      const mockSender = await AztecAddress.random();
       wallet.removeSender = vi.fn().mockResolvedValue(undefined);
 
       const result = await aztecWalletHandler(context, 'aztec_removeSender', { sender: mockSender });
@@ -602,20 +605,20 @@ describe('Aztec Account Wallet Handler', () => {
   describe('Transaction Methods', () => {
     it('handles aztec_proveTx', async () => {
       const mockTxRequest = {
-        origin: AztecAddress.random(),
+        origin: await AztecAddress.random(),
         functionSelector: new Fr(1),
         firstCallArgsHash: new Fr(2),
         txContext: {
           chainId: 1,
           version: 1,
           protocolVersion: 1,
-          excessFeeReceiver: AztecAddress.random(),
+          excessFeeReceiver: await AztecAddress.random(),
         },
         callData: new Uint8Array(),
         gasLimit: 1000000n,
         gasPrice: 1000000n,
-        storageContractAddress: AztecAddress.random(),
-        portalContract: AztecAddress.random(),
+        storageContractAddress: await AztecAddress.random(),
+        portalContract: await AztecAddress.random(),
         argsOfCalls: [],
         authWitnesses: [],
         toTxRequest: () => ({ id: '0x123' }),
@@ -625,7 +628,7 @@ describe('Aztec Account Wallet Handler', () => {
         acir: new Uint8Array([1, 2, 3]),
         vk: new Uint8Array([4, 5, 6]),
         partialWitness: new Uint8Array([7, 8, 9]),
-        publicInputs: [Fr.random()],
+        publicInputs: [await Fr.random()],
         success: true,
         gasUsed: 1000n,
         returnValue: new Uint8Array(),
@@ -635,7 +638,7 @@ describe('Aztec Account Wallet Handler', () => {
         encryptedLogPreimages: [],
         encryptedLogKeys: [],
       } as unknown as PrivateExecutionResult;
-      const mockProvenTx = { hash: TxHash.random() };
+      const mockProvenTx = { hash: await TxHash.random() };
       wallet.proveTx = vi.fn().mockResolvedValue(mockProvenTx);
 
       const result = await aztecWalletHandler(context, 'aztec_proveTx', {
@@ -648,7 +651,7 @@ describe('Aztec Account Wallet Handler', () => {
 
     it('handles aztec_sendTx', async () => {
       const mockTx = {
-        hash: TxHash.random(),
+        hash: await TxHash.random(),
         data: new Uint8Array([1, 2, 3]),
         clientIvcProof: new Uint8Array([4, 5, 6]),
         unencryptedLogs: [],
@@ -656,17 +659,17 @@ describe('Aztec Account Wallet Handler', () => {
         encryptedLogs: [],
         encryptedLogPreimages: [],
         encryptedLogKeys: [],
-        encryptedLogsSalt: Fr.random(),
-        encryptedLogsCommitment: Fr.random(),
+        encryptedLogsSalt: await Fr.random(),
+        encryptedLogsCommitment: await Fr.random(),
         encryptedLogsTreeIndex: 0,
         encryptedLogProofs: [],
         encryptedLogProofsTreeIndex: 0,
-        encryptedLogProofsCommitment: Fr.random(),
-        encryptedLogProofsSalt: Fr.random(),
+        encryptedLogProofsCommitment: await Fr.random(),
+        encryptedLogProofsSalt: await Fr.random(),
         toBuffer: () => new Uint8Array(),
         toString: () => 'mockTx',
       } as unknown as Tx;
-      const mockTxHash = TxHash.random();
+      const mockTxHash = await TxHash.random();
       wallet.sendTx = vi.fn().mockResolvedValue(mockTxHash);
 
       const result = await aztecWalletHandler(context, 'aztec_sendTx', { tx: mockTx });
@@ -675,7 +678,7 @@ describe('Aztec Account Wallet Handler', () => {
     });
 
     it('handles aztec_getTxEffect', async () => {
-      const mockTxHash = TxHash.random();
+      const mockTxHash = await TxHash.random();
       const mockEffect = { success: true };
       wallet.getTxEffect = vi.fn().mockResolvedValue(mockEffect);
 
@@ -687,7 +690,7 @@ describe('Aztec Account Wallet Handler', () => {
     it('throws error when transaction effect not found', async () => {
       wallet.getTxEffect = vi.fn().mockResolvedValue(null);
 
-      const mockTxHash = TxHash.random();
+      const mockTxHash = await TxHash.random();
       await expect(aztecWalletHandler(context, 'aztec_getTxEffect', { txHash: mockTxHash })).rejects.toThrow(
         AztecWalletError,
       );
@@ -696,9 +699,9 @@ describe('Aztec Account Wallet Handler', () => {
 
   describe('Public Storage Methods', () => {
     it('handles aztec_getPublicStorageAt', async () => {
-      const mockContract = AztecAddress.random();
-      const mockStorageSlot = Fr.random();
-      const mockValue = Fr.random();
+      const mockContract = await AztecAddress.random();
+      const mockStorageSlot = await Fr.random();
+      const mockValue = await Fr.random();
       wallet.getPublicStorageAt = vi.fn().mockResolvedValue(mockValue);
 
       const result = await aztecWalletHandler(context, 'aztec_getPublicStorageAt', {

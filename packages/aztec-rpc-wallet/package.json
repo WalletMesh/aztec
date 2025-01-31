@@ -34,10 +34,10 @@
     "typedoc-plugin-markdown": "^4.3.1"
   },
   "dependencies": {
-    "@aztec/aztec.js": "0.68.2",
-    "@aztec/circuit-types": "0.68.2",
-    "@aztec/circuits.js": "^0.68.2",
-    "@aztec/foundation": "0.68.2",
+    "@aztec/aztec.js": "0.72.1",
+    "@aztec/circuit-types": "0.72.1",
+    "@aztec/circuits.js": "0.72.1",
+    "@aztec/foundation": "0.72.1",
     "@walletmesh/jsonrpc": "0.2.2",
     "@walletmesh/router": "0.2.7"
   }

@@ -20,12 +20,10 @@ import {
   type ContractNote,
 } from '@aztec/foundation/abi';
 import { randomContractArtifact, randomDeployedContract } from '@aztec/circuit-types';
-import { aztecAddressSerializer, frSerializer } from './core.js';
-
 describe('Contract Serializers', () => {
   describe('aztec_getContractInstance', () => {
-    it('should serialize and deserialize params', () => {
-      const address = AztecAddress.random();
+    it('should serialize and deserialize params', async () => {
+      const address = await AztecAddress.random();
       const params = { address };
 
       const serialized = aztecGetContractInstanceSerializer.params.serialize(
@@ -41,9 +39,9 @@ describe('Contract Serializers', () => {
       expect(deserialized.address.toString()).toBe(address.toString());
     });
 
-    it('should serialize and deserialize result', () => {
+    it('should serialize and deserialize result', async () => {
       // Create a contract instance with all required fields
-      const result = SerializableContractInstance.random().withAddress(AztecAddress.random());
+      const result = (await SerializableContractInstance.random()).withAddress(await AztecAddress.random());
 
       const serialized = aztecGetContractInstanceSerializer.result.serialize(
         'aztec_getContractInstance',
@@ -64,8 +62,8 @@ describe('Contract Serializers', () => {
   });
 
   describe('aztec_getContractClass', () => {
-    it('should serialize and deserialize params', () => {
-      const id = Fr.random();
+    it('should serialize and deserialize params', async () => {
+      const id = await Fr.random();
       const params = { id };
 
       const serialized = aztecGetContractClassSerializer.params.serialize('aztec_getContractClass', params);
@@ -78,8 +76,8 @@ describe('Contract Serializers', () => {
       expect(deserialized.id.toString()).toBe(id.toString());
     });
 
-    it('should serialize and deserialize result', () => {
-      const artifact = randomContractArtifact();
+    it('should serialize and deserialize result', async () => {
+      const artifact = await randomContractArtifact();
       const result = getContractClassFromArtifact(artifact);
       const serialized = aztecGetContractClassSerializer.result.serialize('aztec_getContractClass', result);
       expect(serialized.method).toBe('aztec_getContractClass');
@@ -97,8 +95,8 @@ describe('Contract Serializers', () => {
   });
 
   describe('aztec_getContractArtifact', () => {
-    it('should serialize and deserialize params', () => {
-      const id = Fr.random();
+    it('should serialize and deserialize params', async () => {
+      const id = await Fr.random();
       const serialized = aztecGetContractArtifactSerializer.params.serialize('aztec_getContractArtifact', {
         id,
       });
@@ -111,8 +109,8 @@ describe('Contract Serializers', () => {
       expect(deserialized.id.toString()).toBe(id.toString());
     });
 
-    it('should serialize and deserialize result', () => {
-      const result = randomContractArtifact();
+    it('should serialize and deserialize result', async () => {
+      const result = await randomContractArtifact();
       const serialized = aztecGetContractArtifactSerializer.result.serialize(
         'aztec_getContractArtifact',
         result,
@@ -128,8 +126,8 @@ describe('Contract Serializers', () => {
   });
 
   describe('aztec_registerContract', () => {
-    it('should serialize and deserialize params', () => {
-      const { instance, artifact } = randomDeployedContract();
+    it('should serialize and deserialize params', async () => {
+      const { instance, artifact } = await randomDeployedContract();
       const serialized = aztecRegisterContractSerializer.params.serialize('aztec_registerContract', {
         instance,
         artifact,

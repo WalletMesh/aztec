@@ -23,16 +23,17 @@ import type { IntentAction, IntentInnerHash } from '@aztec/aztec.js/utils';
 import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
 import type { AbiDecoded } from '@aztec/foundation/abi';
 import type {
-  IncomingNotesFilter,
+  NotesFilter,
   EventMetadataDefinition,
   PrivateExecutionResult,
   TxProvingResult,
   UniqueNote,
-  GetUnencryptedLogsResponse,
   PXEInfo,
   TxSimulationResult,
   InBlock,
   TxEffect,
+  GetPublicLogsResponse,
+  GetContractClassLogsResponse,
 } from '@aztec/circuit-types';
 import type { GasFees, L1_TO_L2_MSG_TREE_HEIGHT } from '@aztec/circuits.js';
 
@@ -311,11 +312,11 @@ export class AztecRemoteWallet implements Wallet {
       .execute() as Promise<AztecWalletMethodMap['aztec_getTxReceipt']['result']>;
   }
 
-  async getIncomingNotes(filter: IncomingNotesFilter): Promise<UniqueNote[]> {
+  async getNotes(filter: NotesFilter): Promise<UniqueNote[]> {
     return this._provider
       .chain(this._providerChainId)
-      .call('aztec_getIncomingNotes', { filter })
-      .execute() as Promise<AztecWalletMethodMap['aztec_getIncomingNotes']['result']>;
+      .call('aztec_getNotes', { filter })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getNotes']['result']>;
   }
 
   async getPublicStorageAt(contract: AztecAddress, storageSlot: Fr): Promise<Fr> {
@@ -366,18 +367,18 @@ export class AztecRemoteWallet implements Wallet {
       .execute() as Promise<AztecWalletMethodMap['aztec_simulateUnconstrained']['result']>;
   }
 
-  async getUnencryptedLogs(filter: LogFilter): Promise<GetUnencryptedLogsResponse> {
+  async getPublicLogs(filter: LogFilter): Promise<GetPublicLogsResponse> {
     return this._provider
       .chain(this._providerChainId)
-      .call('aztec_getUnencryptedLogs', { filter })
-      .execute() as Promise<AztecWalletMethodMap['aztec_getUnencryptedLogs']['result']>;
+      .call('aztec_getPublicLogs', { filter })
+      .execute() as Promise<AztecWalletMethodMap['aztec_getPublicLogs']['result']>;
   }
 
-  async getContractClassLogs(filter: LogFilter): Promise<GetUnencryptedLogsResponse> {
+  async getContractClassLogs(filter: LogFilter): Promise<GetContractClassLogsResponse> {
     return this._provider
       .chain(this._providerChainId)
       .call('aztec_getContractClassLogs', { filter })
-      .execute() as Promise<AztecWalletMethodMap['aztec_getContractClassLogs']['result']>;
+      .execute() as Promise<GetContractClassLogsResponse>;
   }
 
   async getBlockNumber(): Promise<number> {
@@ -441,7 +442,7 @@ export class AztecRemoteWallet implements Wallet {
     >;
   }
 
-  getEncryptedEvents<T>(
+  getPrivateEvents<T>(
     event: EventMetadataDefinition,
     from: number,
     limit: number,
@@ -450,7 +451,7 @@ export class AztecRemoteWallet implements Wallet {
     const completeAddress = this.getCompleteAddress();
     return this._provider
       .chain(this._providerChainId)
-      .call('aztec_getEncryptedEvents', {
+      .call('aztec_getPrivateEvents', {
         event,
         from,
         limit,
@@ -459,10 +460,10 @@ export class AztecRemoteWallet implements Wallet {
       .execute() as Promise<T[]>;
   }
 
-  getUnencryptedEvents<T>(event: EventMetadataDefinition, from: number, limit: number): Promise<T[]> {
+  getPublicEvents<T>(event: EventMetadataDefinition, from: number, limit: number): Promise<T[]> {
     return this._provider
       .chain(this._providerChainId)
-      .call('aztec_getUnencryptedEvents', { event, from, limit })
+      .call('aztec_getPublicEvents', { event, from, limit })
       .execute() as Promise<T[]>;
   }
 
@@ -475,6 +476,16 @@ export class AztecRemoteWallet implements Wallet {
       .chain(this._providerChainId)
       .call('aztec_getL1ToL2MembershipWitness', { contractAddress, messageHash, secret })
       .execute() as Promise<AztecWalletMethodMap['aztec_getL1ToL2MembershipWitness']['result']>;
+  }
+
+  async getL2ToL1MembershipWitness(
+    blockNumber: number,
+    l2Tol1Message: Fr,
+  ): Promise<[bigint, SiblingPath<number>]> {
+    return this._provider
+      .chain(this._providerChainId)
+      .call('aztec_getL2ToL1MembershipWitness', { blockNumber, l2Tol1Message })
+      .execute() as Promise<[bigint, SiblingPath<number>]>;
   }
 }
 

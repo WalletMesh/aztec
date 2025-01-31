@@ -1,31 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { Fr, AztecAddress, ExtendedNote } from '@aztec/aztec.js';
-import { type IncomingNotesFilter, NoteStatus, TxHash, UniqueNote } from '@aztec/circuit-types';
-import {
-  aztecGetIncomingNotesSerializer,
-  aztecAddNoteSerializer,
-  aztecAddNullifiedNoteSerializer,
-} from './note.js';
+import { type NotesFilter, NoteStatus, TxHash, UniqueNote } from '@aztec/circuit-types';
+import { aztecGetNotesSerializer, aztecAddNoteSerializer, aztecAddNullifiedNoteSerializer } from './note.js';
 
 describe('Note Serializers', () => {
-  describe('aztec_getIncomingNotes', () => {
-    const METHOD = 'aztec_getIncomingNotes';
+  describe('aztec_getNotes', () => {
+    const METHOD = 'aztec_getNotes';
 
-    it('should serialize and deserialize params', () => {
-      const filter: IncomingNotesFilter = {
-        txHash: TxHash.random(),
-        contractAddress: AztecAddress.random(),
-        storageSlot: Fr.random(),
-        owner: AztecAddress.random(),
+    it('should serialize and deserialize params', async () => {
+      const filter: NotesFilter = {
+        txHash: await TxHash.random(),
+        contractAddress: await AztecAddress.random(),
+        storageSlot: await Fr.random(),
+        owner: await AztecAddress.random(),
         status: NoteStatus.ACTIVE,
-        siloedNullifier: Fr.random(),
-        scopes: [AztecAddress.random()],
+        siloedNullifier: await Fr.random(),
+        scopes: [await AztecAddress.random()],
       };
       const params = { filter };
-      const serialized = aztecGetIncomingNotesSerializer.params.serialize(METHOD, params);
+      const serialized = aztecGetNotesSerializer.params.serialize(METHOD, params);
       expect(serialized.method).toBe(METHOD);
 
-      const deserialized = aztecGetIncomingNotesSerializer.params.deserialize(METHOD, serialized);
+      const deserialized = aztecGetNotesSerializer.params.deserialize(METHOD, serialized);
       expect(deserialized.filter.txHash?.toString()).toBe(filter.txHash?.toString());
       expect(deserialized.filter.contractAddress?.toString()).toBe(filter.contractAddress?.toString());
       expect(deserialized.filter.storageSlot?.toString()).toBe(filter.storageSlot?.toString());
@@ -37,22 +33,24 @@ describe('Note Serializers', () => {
       );
     });
 
-    it('should serialize and deserialize result', () => {
-      const result = [UniqueNote.random(), UniqueNote.random()];
+    it('should serialize and deserialize result', async () => {
+      const result = [await UniqueNote.random(), await UniqueNote.random()];
 
-      const serialized = aztecGetIncomingNotesSerializer.result.serialize(METHOD, result);
+      const serialized = aztecGetNotesSerializer.result.serialize(METHOD, result);
       expect(serialized.method).toBe(METHOD);
 
-      const deserialized = aztecGetIncomingNotesSerializer.result.deserialize(METHOD, serialized);
-      expect(deserialized.map((n) => n.toString())).toEqual(result.map((n) => n.toString()));
+      const deserialized = aztecGetNotesSerializer.result.deserialize(METHOD, serialized);
+      expect(deserialized.map((note: UniqueNote) => note.toString())).toEqual(
+        result.map((note: UniqueNote) => note.toString()),
+      );
     });
   });
 
   describe('aztec_addNote', () => {
     const METHOD = 'aztec_addNote';
 
-    it('should serialize and deserialize params', () => {
-      const note = ExtendedNote.random();
+    it('should serialize and deserialize params', async () => {
+      const note = await ExtendedNote.random();
       const params = { note };
 
       const serialized = aztecAddNoteSerializer.params.serialize(METHOD, params);
@@ -76,8 +74,8 @@ describe('Note Serializers', () => {
   describe('aztec_addNullifiedNote', () => {
     const METHOD = 'aztec_addNullifiedNote';
 
-    it('should serialize and deserialize params', () => {
-      const note = ExtendedNote.random();
+    it('should serialize and deserialize params', async () => {
+      const note = await ExtendedNote.random();
       const params = { note };
 
       const serialized = aztecAddNullifiedNoteSerializer.params.serialize(METHOD, params);

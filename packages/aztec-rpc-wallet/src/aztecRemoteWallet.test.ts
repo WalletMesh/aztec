@@ -19,7 +19,6 @@ import type {
   AuthWitness,
 } from '@aztec/aztec.js';
 import type {
-  GetUnencryptedLogsResponse,
   PrivateExecutionResult,
   TxProvingResult,
   TxSimulationResult,
@@ -27,7 +26,7 @@ import type {
   TxEffect,
   EventMetadataDefinition,
   PXEInfo,
-  IncomingNotesFilter,
+  NotesFilter,
   UniqueNote,
 } from '@aztec/circuit-types';
 import { randomDeployedContract } from '@aztec/circuit-types';
@@ -197,16 +196,21 @@ describe('AztecRemoteWallet', () => {
   });
 
   describe('contract operations', () => {
-    const { instance, artifact } = randomDeployedContract();
-    const contractClass = getContractClassFromArtifact(artifact);
+    let mockContract: { instance: ContractInstanceWithAddress; artifact: ContractArtifact };
+    let contractClass: ContractClassWithId;
+
+    beforeEach(async () => {
+      mockContract = await randomDeployedContract();
+      contractClass = await getContractClassFromArtifact(mockContract.artifact);
+    });
 
     it('gets contract instance', async () => {
-      mockChainBuilder.execute.mockResolvedValueOnce(instance);
+      mockChainBuilder.execute.mockResolvedValueOnce(mockContract.instance);
 
-      const result = await wallet.getContractInstance(instance.address);
-      expect(result).toBe(instance);
+      const result = await wallet.getContractInstance(mockContract.instance.address);
+      expect(result).toBe(mockContract.instance);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractInstance', {
-        address: instance.address,
+        address: mockContract.instance.address,
       });
     });
 
@@ -219,10 +223,10 @@ describe('AztecRemoteWallet', () => {
     });
 
     it('gets contract artifact', async () => {
-      mockChainBuilder.execute.mockResolvedValueOnce(artifact);
+      mockChainBuilder.execute.mockResolvedValueOnce(mockContract.artifact);
 
       const result = await wallet.getContractArtifact(contractClass.id);
-      expect(result).toBe(artifact);
+      expect(result).toBe(mockContract.artifact);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getContractArtifact', {
         id: contractClass.id,
       });
@@ -230,23 +234,23 @@ describe('AztecRemoteWallet', () => {
 
     it('registers contract', async () => {
       mockChainBuilder.execute.mockResolvedValueOnce(true);
-      await wallet.registerContract({ instance: instance, artifact: artifact });
+      await wallet.registerContract({ instance: mockContract.instance, artifact: mockContract.artifact });
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_registerContract', {
-        instance,
-        artifact,
+        instance: mockContract.instance,
+        artifact: mockContract.artifact,
       });
     });
 
     it('registers contract class', async () => {
       mockChainBuilder.execute.mockResolvedValueOnce(true);
-      await wallet.registerContractClass(artifact);
+      await wallet.registerContractClass(mockContract.artifact);
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_registerContractClass', {
-        artifact: artifact,
+        artifact: mockContract.artifact,
       });
     });
 
     it('gets contracts', async () => {
-      const mockContracts = [instance.address];
+      const mockContracts = [mockContract.instance.address];
       mockChainBuilder.execute.mockResolvedValueOnce(mockContracts);
 
       const result = await wallet.getContracts();
@@ -436,7 +440,7 @@ describe('AztecRemoteWallet', () => {
 
   describe('note operations', () => {
     const mockNote = {} as ExtendedNote;
-    const mockFilter = {} as IncomingNotesFilter;
+    const mockFilter = {} as NotesFilter;
 
     it('adds note', async () => {
       mockChainBuilder.execute.mockResolvedValueOnce(true);
@@ -450,12 +454,12 @@ describe('AztecRemoteWallet', () => {
       expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_addNullifiedNote', { note: mockNote });
     });
 
-    it('gets incoming notes', async () => {
+    it('gets notes', async () => {
       const mockNotes = [{}] as UniqueNote[];
       mockChainBuilder.execute.mockResolvedValueOnce(mockNotes);
-      const result = await wallet.getIncomingNotes(mockFilter);
+      const result = await wallet.getNotes(mockFilter);
       expect(result).toBe(mockNotes);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getIncomingNotes', { filter: mockFilter });
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getNotes', { filter: mockFilter });
     });
   });
 
@@ -468,7 +472,7 @@ describe('AztecRemoteWallet', () => {
     const mockVpks = [{}] as Point[];
     const mockCompleteAddress = { publicKeys: { masterIncomingViewingPublicKey: {} } } as CompleteAddress;
 
-    it('gets encrypted events with default vpks', async () => {
+    it('gets private events with default vpks', async () => {
       const mockEvents = [{ data: '0x1234' }];
       mockChainBuilder.execute.mockResolvedValueOnce(mockCompleteAddress).mockResolvedValueOnce(mockEvents);
 
@@ -482,9 +486,9 @@ describe('AztecRemoteWallet', () => {
       // Wait for promise to resolve
       await new Promise(process.nextTick);
 
-      const result = await wallet.getEncryptedEvents(mockEvent, 0, 10);
+      const result = await wallet.getPrivateEvents(mockEvent, 0, 10);
       expect(result).toBe(mockEvents);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getEncryptedEvents', {
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getPrivateEvents', {
         event: mockEvent,
         from: 0,
         limit: 10,
@@ -492,7 +496,7 @@ describe('AztecRemoteWallet', () => {
       });
     });
 
-    it('gets encrypted events with custom vpks', async () => {
+    it('gets private events with custom vpks', async () => {
       const mockEvents = [{ data: '0x1234' }];
       mockChainBuilder.execute.mockResolvedValueOnce(mockCompleteAddress).mockResolvedValueOnce(mockEvents);
 
@@ -506,9 +510,9 @@ describe('AztecRemoteWallet', () => {
       // Wait for promise to resolve
       await new Promise(process.nextTick);
 
-      const result = await wallet.getEncryptedEvents(mockEvent, 0, 10, mockVpks);
+      const result = await wallet.getPrivateEvents(mockEvent, 0, 10, mockVpks);
       expect(result).toBe(mockEvents);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getEncryptedEvents', {
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getPrivateEvents', {
         event: mockEvent,
         from: 0,
         limit: 10,
@@ -516,12 +520,12 @@ describe('AztecRemoteWallet', () => {
       });
     });
 
-    it('gets unencrypted events', async () => {
+    it('gets public events', async () => {
       const mockEvents = [{ data: '0x1234' }];
       mockChainBuilder.execute.mockResolvedValueOnce(mockEvents);
-      const result = await wallet.getUnencryptedEvents(mockEvent, 0, 10);
+      const result = await wallet.getPublicEvents(mockEvent, 0, 10);
       expect(result).toBe(mockEvents);
-      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getUnencryptedEvents', {
+      expect(mockChainBuilder.call).toHaveBeenCalledWith('aztec_getPublicEvents', {
         event: mockEvent,
         from: 0,
         limit: 10,

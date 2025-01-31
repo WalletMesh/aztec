@@ -1,41 +1,49 @@
 import type { AztecWalletMethodMap } from '../types.js';
-import type { JSONRPCSerializedData, JSONRPCSerializer } from './types.js';
-import { encodeBase64, decodeBase64 } from './types.js';
-import type { IncomingNotesFilter } from '@aztec/circuit-types';
-import { UniqueNote } from '@aztec/circuit-types';
-import { ExtendedNote } from '@aztec/aztec.js';
+import type { JSONRPCSerializedData, JSONRPCSerializer } from '@walletmesh/jsonrpc';
+import { UniqueNote, TxHash } from '@aztec/circuit-types';
+import { ExtendedNote, AztecAddress, Fr } from '@aztec/aztec.js';
 
 /**
- * Serializer for the aztec_getIncomingNotes RPC method.
- * Handles serialization of incoming note queries and results between JSON-RPC format and native Aztec types.
- * Used to retrieve notes that have been sent to an account but not yet processed.
+ * Serializer for the aztec_getNotes RPC method.
+ * Handles serialization of note queries and results between JSON-RPC format and native Aztec types.
  */
-export class AztecGetIncomingNotesSerializer
+export class AztecGetNotesSerializer
   implements
     JSONRPCSerializer<
-      AztecWalletMethodMap['aztec_getIncomingNotes']['params'],
-      AztecWalletMethodMap['aztec_getIncomingNotes']['result']
+      AztecWalletMethodMap['aztec_getNotes']['params'],
+      AztecWalletMethodMap['aztec_getNotes']['result']
     >
 {
   params = {
     /**
-     * Serializes incoming notes filter parameters for RPC transport.
+     * Serializes notes filter parameters for RPC transport.
      * @param method - The RPC method name
-     * @param value - The parameters containing filter criteria for incoming notes
+     * @param value - The parameters containing filter criteria for notes
      * @returns Serialized filter data
      */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getIncomingNotes']['params'],
+      value: AztecWalletMethodMap['aztec_getNotes']['params'],
     ): JSONRPCSerializedData => {
       const { filter } = value;
+      // Convert instances to their string representations for transport
+      const serializedFilter = {
+        txHash: filter.txHash?.toString(),
+        contractAddress: filter.contractAddress?.toString(),
+        storageSlot: filter.storageSlot?.toString(),
+        owner: filter.owner?.toString(),
+        status: filter.status,
+        siloedNullifier: filter.siloedNullifier?.toString(),
+        scopes: filter.scopes?.map((scope) => scope.toString()),
+      };
+
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(filter)),
+        serialized: JSON.stringify({ filter: serializedFilter }),
       };
     },
     /**
-     * Deserializes incoming notes filter parameters from RPC transport.
+     * Deserializes notes filter parameters from RPC transport.
      * @param method - The RPC method name
      * @param data - The serialized filter data
      * @returns Deserialized filter parameters
@@ -43,30 +51,46 @@ export class AztecGetIncomingNotesSerializer
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getIncomingNotes']['params'] => {
-      const filter = JSON.parse(decodeBase64(data.serialized)) as IncomingNotesFilter;
-      return { filter };
+    ): AztecWalletMethodMap['aztec_getNotes']['params'] => {
+      const { filter } = JSON.parse(data.serialized);
+
+      // Convert string representations back to instances
+      return {
+        filter: {
+          txHash: filter.txHash ? TxHash.fromString(filter.txHash) : undefined,
+          contractAddress: filter.contractAddress
+            ? AztecAddress.fromString(filter.contractAddress)
+            : undefined,
+          storageSlot: filter.storageSlot ? Fr.fromString(filter.storageSlot) : undefined,
+          owner: filter.owner ? AztecAddress.fromString(filter.owner) : undefined,
+          status: filter.status,
+          siloedNullifier: filter.siloedNullifier ? Fr.fromString(filter.siloedNullifier) : undefined,
+          scopes: filter.scopes
+            ? filter.scopes.map((scope: string) => AztecAddress.fromString(scope))
+            : undefined,
+        },
+      };
     },
   };
 
   result = {
     /**
-     * Serializes the incoming notes query result.
+     * Serializes the notes query result.
      * @param method - The RPC method name
      * @param value - Array of unique notes matching the filter criteria
      * @returns Serialized note array
      */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getIncomingNotes']['result'],
+      value: AztecWalletMethodMap['aztec_getNotes']['result'],
     ): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value.map((n) => n.toString()))),
+        serialized: JSON.stringify(value.map((n) => n.toString())),
       };
     },
     /**
-     * Deserializes the incoming notes query result.
+     * Deserializes the notes query result.
      * @param method - The RPC method name
      * @param data - The serialized note array data
      * @returns Array of deserialized unique notes
@@ -74,8 +98,8 @@ export class AztecGetIncomingNotesSerializer
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getIncomingNotes']['result'] => {
-      return JSON.parse(decodeBase64(data.serialized)).map((n: string) => UniqueNote.fromString(n));
+    ): AztecWalletMethodMap['aztec_getNotes']['result'] => {
+      return JSON.parse(data.serialized).map((n: string) => UniqueNote.fromString(n));
     },
   };
 }
@@ -83,7 +107,6 @@ export class AztecGetIncomingNotesSerializer
 /**
  * Serializer for the aztec_addNote RPC method.
  * Handles serialization of note addition requests between JSON-RPC format and native Aztec types.
- * Used to add new notes to an account's note tree.
  */
 export class AztecAddNoteSerializer
   implements
@@ -106,7 +129,7 @@ export class AztecAddNoteSerializer
       const { note } = value;
       return {
         method,
-        serialized: encodeBase64(note.toBuffer().toString('hex')),
+        serialized: JSON.stringify({ note: note.toBuffer().toString('base64') }),
       };
     },
     /**
@@ -119,7 +142,8 @@ export class AztecAddNoteSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_addNote']['params'] => {
-      const note = ExtendedNote.fromBuffer(Buffer.from(decodeBase64(data.serialized), 'hex'));
+      const { note: noteBase64 } = JSON.parse(data.serialized);
+      const note = ExtendedNote.fromBuffer(Buffer.from(noteBase64, 'base64'));
       return { note };
     },
   };
@@ -134,7 +158,7 @@ export class AztecAddNoteSerializer
     serialize: (method: string, value: boolean): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     /**
@@ -144,7 +168,7 @@ export class AztecAddNoteSerializer
      * @returns Boolean indicating success
      */
     deserialize: (method: string, data: JSONRPCSerializedData): boolean => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
@@ -152,7 +176,6 @@ export class AztecAddNoteSerializer
 /**
  * Serializer for the aztec_addNullifiedNote RPC method.
  * Handles serialization of nullified note addition requests between JSON-RPC format and native Aztec types.
- * Used to mark notes as spent/nullified in the note tree.
  */
 export class AztecAddNullifiedNoteSerializer
   implements
@@ -175,7 +198,7 @@ export class AztecAddNullifiedNoteSerializer
       const { note } = value;
       return {
         method,
-        serialized: encodeBase64(note.toBuffer().toString('hex')),
+        serialized: JSON.stringify({ note: note.toBuffer().toString('base64') }),
       };
     },
     /**
@@ -188,7 +211,8 @@ export class AztecAddNullifiedNoteSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_addNullifiedNote']['params'] => {
-      const note = ExtendedNote.fromBuffer(Buffer.from(decodeBase64(data.serialized), 'hex'));
+      const { note: noteBase64 } = JSON.parse(data.serialized);
+      const note = ExtendedNote.fromBuffer(Buffer.from(noteBase64, 'base64'));
       return { note };
     },
   };
@@ -203,7 +227,7 @@ export class AztecAddNullifiedNoteSerializer
     serialize: (method: string, value: boolean): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     /**
@@ -213,7 +237,7 @@ export class AztecAddNullifiedNoteSerializer
      * @returns Boolean indicating success
      */
     deserialize: (method: string, data: JSONRPCSerializedData): boolean => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
@@ -222,6 +246,6 @@ export class AztecAddNullifiedNoteSerializer
  * Pre-instantiated serializer instances for Aztec note-related RPC methods.
  * These instances can be used directly by the RPC handler implementation.
  */
-export const aztecGetIncomingNotesSerializer = new AztecGetIncomingNotesSerializer();
+export const aztecGetNotesSerializer = new AztecGetNotesSerializer();
 export const aztecAddNoteSerializer = new AztecAddNoteSerializer();
 export const aztecAddNullifiedNoteSerializer = new AztecAddNullifiedNoteSerializer();

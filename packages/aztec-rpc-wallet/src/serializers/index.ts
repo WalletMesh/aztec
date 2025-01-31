@@ -1,13 +1,10 @@
 import type { AztecWalletMethodMap } from '../types.js';
-import type { JSONRPCSerializer, JSONRPCSerializedData } from './types.js';
-import { encodeBase64 } from './types.js';
+import type { JSONRPCSerializedData, JSONRPCSerializer } from '@walletmesh/jsonrpc';
 
 /**
  * Re-export all serializer types and implementations.
  * This provides a single entry point for importing any serializer functionality.
  */
-export * from './types.js';
-export * from './core.js';
 export * from './account.js';
 export * from './contract.js';
 export * from './transaction.js';
@@ -32,16 +29,15 @@ import {
   aztecProveTxSerializer,
   aztecSendTxSerializer,
   aztecGetTxReceiptSerializer,
+  aztecGetTxEffectSerializer,
+  aztecSimulateTxSerializer,
 } from './transaction.js';
+import { aztecGetNotesSerializer, aztecAddNoteSerializer, aztecAddNullifiedNoteSerializer } from './note.js';
 import {
-  aztecGetIncomingNotesSerializer,
-  aztecAddNoteSerializer,
-  aztecAddNullifiedNoteSerializer,
-} from './note.js';
-import {
-  aztecGetUnencryptedLogsSerializer,
-  aztecGetEncryptedEventsSerializer,
-  aztecGetUnencryptedEventsSerializer,
+  aztecGetPublicLogsSerializer,
+  aztecGetContractClassLogsSerializer,
+  aztecGetPrivateEventsSerializer,
+  aztecGetPublicEventsSerializer,
 } from './log.js';
 
 /**
@@ -86,16 +82,19 @@ const methodSerializers: Record<AztecMethodName, JSONRPCSerializer<unknown, unkn
   aztec_proveTx: aztecProveTxSerializer,
   aztec_sendTx: aztecSendTxSerializer,
   aztec_getTxReceipt: aztecGetTxReceiptSerializer,
+  aztec_getTxEffect: aztecGetTxEffectSerializer,
+  aztec_simulateTx: aztecSimulateTxSerializer,
 
   // Note methods
-  aztec_getIncomingNotes: aztecGetIncomingNotesSerializer,
+  aztec_getNotes: aztecGetNotesSerializer,
   aztec_addNote: aztecAddNoteSerializer,
   aztec_addNullifiedNote: aztecAddNullifiedNoteSerializer,
 
   // Log methods
-  aztec_getUnencryptedLogs: aztecGetUnencryptedLogsSerializer,
-  aztec_getEncryptedEvents: aztecGetEncryptedEventsSerializer,
-  aztec_getUnencryptedEvents: aztecGetUnencryptedEventsSerializer,
+  aztec_getPublicLogs: aztecGetPublicLogsSerializer,
+  aztec_getContractClassLogs: aztecGetContractClassLogsSerializer,
+  aztec_getPrivateEvents: aztecGetPrivateEventsSerializer,
+  aztec_getPublicEvents: aztecGetPublicEventsSerializer,
 };
 
 /**
@@ -109,7 +108,7 @@ const methodSerializers: Record<AztecMethodName, JSONRPCSerializer<unknown, unkn
 function wrapUnknownValue(method: string, value: unknown): JSONRPCSerializedData {
   return {
     method,
-    serialized: encodeBase64(JSON.stringify(value)),
+    serialized: JSON.stringify(value),
   };
 }
 
@@ -208,6 +207,3 @@ export const AztecWalletSerializer: JSONRPCSerializer<unknown, unknown> = {
     },
   },
 };
-
-// Export the main serializer interface
-export type { JSONRPCSerializer } from './types.js';

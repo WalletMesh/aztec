@@ -1,11 +1,17 @@
 import type { AztecWalletMethodMap } from '../types.js';
-import type { JSONRPCSerializedData, JSONRPCSerializer } from './types.js';
-import { encodeBase64, decodeBase64 } from './types.js';
-import { txHashSerializer } from './core.js';
-import { TxEffect, TxSimulationResult, inBlockSchemaFor, type TxProvingResult } from '@aztec/circuit-types';
-import { TxExecutionRequest, TxReceipt, Tx, AztecAddress } from '@aztec/aztec.js';
+import type { JSONRPCSerializedData, JSONRPCSerializer } from '@walletmesh/jsonrpc';
+import { TxProvingResult } from '@aztec/circuit-types';
+import {
+  PrivateExecutionResult,
+  TxEffect,
+  TxSimulationResult,
+  inBlockSchemaFor,
+  TxHash,
+} from '@aztec/circuit-types';
+import { TxExecutionRequest, TxReceipt, Tx, AztecAddress, Fr } from '@aztec/aztec.js';
+import { serializeExecutionRequestInit, deserializeExecutionRequestInit } from './transaction-utils.js';
 
-import { SerializablePrivateExecutionResult, SerializableTxProvingResult } from './transaction-utils.js';
+import { jsonParseWithSchema, jsonStringify } from '@aztec/foundation/json-rpc';
 
 /**
  * Serializer for the aztec_createTxExecutionRequest RPC method.
@@ -26,14 +32,14 @@ export class AztecCreateTxExecutionRequestSerializer
       const { exec } = value;
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(exec)),
+        serialized: serializeExecutionRequestInit(exec),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_createTxExecutionRequest']['params'] => {
-      const exec = JSON.parse(decodeBase64(data.serialized));
+      const exec = deserializeExecutionRequestInit(data.serialized);
       return { exec };
     },
   };
@@ -42,11 +48,11 @@ export class AztecCreateTxExecutionRequestSerializer
     serialize: (method: string, value: TxExecutionRequest): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(value.toString()),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): TxExecutionRequest => {
-      return TxExecutionRequest.fromString(decodeBase64(data.serialized));
+      return jsonParseWithSchema(data.serialized, TxExecutionRequest.schema);
     },
   };
 }
@@ -54,7 +60,6 @@ export class AztecCreateTxExecutionRequestSerializer
 /**
  * Serializer for the aztec_proveTx RPC method.
  * Handles serialization of transaction proving requests and results between JSON-RPC format and native Aztec types.
- * Includes handling of private execution results and proving outcomes.
  */
 export class AztecProveTxSerializer
   implements
@@ -69,35 +74,35 @@ export class AztecProveTxSerializer
       value: AztecWalletMethodMap['aztec_proveTx']['params'],
     ): JSONRPCSerializedData => {
       const { txRequest, privateExecutionResult } = value;
-      const serializablePrivateExecutionResult =
-        SerializablePrivateExecutionResult.from(privateExecutionResult);
       return {
         method,
-        serialized: encodeBase64(JSON.stringify([txRequest.toString(), serializablePrivateExecutionResult])),
+        serialized: JSON.stringify({
+          txRequest: jsonStringify(txRequest),
+          privateExecutionResult: jsonStringify(privateExecutionResult),
+        }),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_proveTx']['params'] => {
-      const [txRequest, privateExecutionResult] = JSON.parse(decodeBase64(data.serialized));
+      const { txRequest, privateExecutionResult } = JSON.parse(data.serialized);
       return {
-        txRequest: TxExecutionRequest.fromString(txRequest),
-        privateExecutionResult: SerializablePrivateExecutionResult.fromJSON(privateExecutionResult),
+        txRequest: jsonParseWithSchema(txRequest, TxExecutionRequest.schema),
+        privateExecutionResult: jsonParseWithSchema(privateExecutionResult, PrivateExecutionResult.schema),
       };
     },
   };
 
   result = {
     serialize: (method: string, value: TxProvingResult): JSONRPCSerializedData => {
-      const serializableTxProvingResult = SerializableTxProvingResult.from(value);
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(serializableTxProvingResult)),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): TxProvingResult => {
-      return SerializableTxProvingResult.fromJSON(JSON.parse(decodeBase64(data.serialized)));
+      return jsonParseWithSchema(data.serialized, TxProvingResult.schema);
     },
   };
 }
@@ -121,15 +126,14 @@ export class AztecSendTxSerializer
       const { tx } = value;
       return {
         method,
-        serialized: encodeBase64(tx.toBuffer().toString('hex')),
+        serialized: jsonStringify(tx),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_sendTx']['params'] => {
-      const tx = Tx.fromBuffer(Buffer.from(decodeBase64(data.serialized), 'hex'));
-      return { tx };
+      return { tx: jsonParseWithSchema(data.serialized, Tx.schema) };
     },
   };
 
@@ -140,14 +144,14 @@ export class AztecSendTxSerializer
     ): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(txHashSerializer.serialize(value)),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_sendTx']['result'] => {
-      return txHashSerializer.deserialize(decodeBase64(data.serialized));
+      return jsonParseWithSchema(data.serialized, TxHash.schema);
     },
   };
 }
@@ -155,7 +159,6 @@ export class AztecSendTxSerializer
 /**
  * Serializer for the aztec_getTxEffect RPC method.
  * Handles serialization of transaction effect queries and results between JSON-RPC format and native Aztec types.
- * Transaction effects represent the outcome and state changes caused by a transaction.
  */
 export class AztecGetTxEffectSerializer
   implements
@@ -172,14 +175,14 @@ export class AztecGetTxEffectSerializer
       const { txHash } = value;
       return {
         method,
-        serialized: encodeBase64(txHashSerializer.serialize(txHash)),
+        serialized: jsonStringify(txHash),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_getTxEffect']['params'] => {
-      const txHash = txHashSerializer.deserialize(decodeBase64(data.serialized));
+      const txHash = jsonParseWithSchema(data.serialized, TxHash.schema);
       return { txHash };
     },
   };
@@ -191,14 +194,14 @@ export class AztecGetTxEffectSerializer
     ): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(TxEffect.schema.parse(value))),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_getTxEffect']['result'] => {
-      return inBlockSchemaFor(TxEffect.schema).parse(JSON.parse(decodeBase64(data.serialized)));
+      return jsonParseWithSchema(data.serialized, inBlockSchemaFor(TxEffect.schema));
     },
   };
 }
@@ -206,7 +209,6 @@ export class AztecGetTxEffectSerializer
 /**
  * Serializer for the aztec_getTxReceipt RPC method.
  * Handles serialization of transaction receipt queries and results between JSON-RPC format and native Aztec types.
- * Transaction receipts contain detailed information about executed transactions.
  */
 export class AztecGetTxReceiptSerializer
   implements
@@ -223,14 +225,14 @@ export class AztecGetTxReceiptSerializer
       const { txHash } = value;
       return {
         method,
-        serialized: encodeBase64(txHashSerializer.serialize(txHash)),
+        serialized: jsonStringify(txHash),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_getTxReceipt']['params'] => {
-      const txHash = txHashSerializer.deserialize(decodeBase64(data.serialized));
+      const txHash = jsonParseWithSchema(data.serialized, TxHash.schema);
       return { txHash };
     },
   };
@@ -239,11 +241,11 @@ export class AztecGetTxReceiptSerializer
     serialize: (method: string, value: TxReceipt): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(TxReceipt.schema.parse(value))),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): TxReceipt => {
-      return TxReceipt.schema.parse(JSON.parse(decodeBase64(data.serialized)));
+      return jsonParseWithSchema(data.serialized, TxReceipt.schema);
     },
   };
 }
@@ -251,7 +253,6 @@ export class AztecGetTxReceiptSerializer
 /**
  * Serializer for the aztec_simulateTx RPC method.
  * Handles serialization of transaction simulation requests and results between JSON-RPC format and native Aztec types.
- * Supports simulation configuration including public simulation, custom sender, validation options, and profiling.
  */
 export class AztecSimulateTxSerializer
   implements
@@ -268,29 +269,26 @@ export class AztecSimulateTxSerializer
       const { txRequest, simulatePublic, msgSender, skipTxValidation, enforceFeePayment, profile } = value;
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify([
-            txRequest.toString(),
-            simulatePublic,
-            msgSender,
-            skipTxValidation,
-            enforceFeePayment,
-            profile,
-          ]),
-        ),
+        serialized: JSON.stringify({
+          txRequest: jsonStringify(txRequest),
+          simulatePublic,
+          msgSender: JSON.stringify(msgSender),
+          skipTxValidation,
+          enforceFeePayment,
+          profile,
+        }),
       };
     },
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_simulateTx']['params'] => {
-      const [txRequest, simulatePublic, msgSender, skipTxValidation, enforceFeePayment, profile] = JSON.parse(
-        decodeBase64(data.serialized),
-      );
+      const { txRequest, simulatePublic, msgSender, skipTxValidation, enforceFeePayment, profile } =
+        JSON.parse(data.serialized);
       return {
-        txRequest: TxExecutionRequest.fromString(txRequest),
+        txRequest: jsonParseWithSchema(txRequest, TxExecutionRequest.schema),
         simulatePublic,
-        msgSender: msgSender ? AztecAddress.fromString(msgSender) : undefined,
+        msgSender: jsonParseWithSchema(msgSender, AztecAddress.schema),
         skipTxValidation,
         enforceFeePayment,
         profile,
@@ -300,32 +298,13 @@ export class AztecSimulateTxSerializer
 
   result = {
     serialize: (method: string, value: TxSimulationResult): JSONRPCSerializedData => {
-      const serializablePrivateExecutionResult = SerializablePrivateExecutionResult.from(
-        value.privateExecutionResult,
-      );
-
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify({
-            privateExecutionResult: serializablePrivateExecutionResult,
-            publicInputs: value.publicInputs,
-            publicOutput: value.publicOutput,
-            profileResult: value.profileResult,
-          }),
-        ),
+        serialized: jsonStringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): TxSimulationResult => {
-      const { privateExecutionResult, publicInputs, publicOutput, profileResult } = JSON.parse(
-        decodeBase64(data.serialized),
-      );
-      return new TxSimulationResult(
-        SerializablePrivateExecutionResult.fromJSON(privateExecutionResult),
-        publicInputs,
-        publicOutput,
-        profileResult,
-      );
+      return jsonParseWithSchema(data.serialized, TxSimulationResult.schema);
     },
   };
 }

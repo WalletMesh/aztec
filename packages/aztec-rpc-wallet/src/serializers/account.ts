@@ -1,18 +1,11 @@
 import type { AztecWalletMethodMap } from '../types.js';
-import type { JSONRPCSerializedData, JSONRPCSerializer } from './types.js';
-import { encodeBase64, decodeBase64 } from './types.js';
-import {
-  aztecAddressSerializer,
-  completeAddressSerializer,
-  frSerializer,
-  authWitnessSerializer,
-} from './core.js';
-import type { PartialAddress, AztecAddress } from '@aztec/aztec.js';
+import type { JSONRPCSerializedData, JSONRPCSerializer } from '@walletmesh/jsonrpc';
+import type { PartialAddress } from '@aztec/aztec.js';
+import { CompleteAddress, AuthWitness, AztecAddress, Fr } from '@aztec/aztec.js';
 
 /**
  * Serializer for the aztec_setScopes RPC method.
  * Handles serialization of account scope settings between JSON-RPC format and native Aztec types.
- * Scopes define which contracts can interact with an account.
  */
 export class AztecSetScopesSerializer
   implements
@@ -35,9 +28,9 @@ export class AztecSetScopesSerializer
       const { scopes } = value;
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify(scopes.map((s: AztecAddress) => aztecAddressSerializer.serialize(s))),
-        ),
+        serialized: JSON.stringify({
+          scopes: scopes.map((s) => s.toString()),
+        }),
       };
     },
     /**
@@ -50,10 +43,10 @@ export class AztecSetScopesSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_setScopes']['params'] => {
-      const scopes = JSON.parse(decodeBase64(data.serialized)).map((s: string) =>
-        aztecAddressSerializer.deserialize(s),
-      );
-      return { scopes };
+      const { scopes } = JSON.parse(data.serialized);
+      return {
+        scopes: scopes.map((s: string) => AztecAddress.fromString(s)),
+      };
     },
   };
 
@@ -67,7 +60,7 @@ export class AztecSetScopesSerializer
     serialize: (method: string, value: boolean): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     /**
@@ -77,7 +70,7 @@ export class AztecSetScopesSerializer
      * @returns Boolean indicating success
      */
     deserialize: (method: string, data: JSONRPCSerializedData): boolean => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
@@ -85,7 +78,6 @@ export class AztecSetScopesSerializer
 /**
  * Serializer for the aztec_registerAccount RPC method.
  * Handles serialization of account registration data between JSON-RPC format and native Aztec types.
- * Account registration involves creating a new account with a secret key and partial address.
  */
 export class AztecRegisterAccountSerializer
   implements
@@ -108,12 +100,10 @@ export class AztecRegisterAccountSerializer
       const { secretKey, partialAddress } = value;
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify([
-            frSerializer.serialize(secretKey),
-            frSerializer.serialize(partialAddress as unknown as PartialAddress),
-          ]),
-        ),
+        serialized: JSON.stringify({
+          secretKey: secretKey.toString(),
+          partialAddress: partialAddress.toString(),
+        }),
       };
     },
     /**
@@ -126,10 +116,10 @@ export class AztecRegisterAccountSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_registerAccount']['params'] => {
-      const [secretKey, partialAddress] = JSON.parse(decodeBase64(data.serialized));
+      const { secretKey, partialAddress } = JSON.parse(data.serialized);
       return {
-        secretKey: frSerializer.deserialize(secretKey),
-        partialAddress: frSerializer.deserialize(partialAddress) as PartialAddress,
+        secretKey: Fr.fromString(secretKey),
+        partialAddress: Fr.fromString(partialAddress) as PartialAddress,
       };
     },
   };
@@ -141,13 +131,10 @@ export class AztecRegisterAccountSerializer
      * @param value - The complete address of the registered account
      * @returns Serialized complete address
      */
-    serialize: (
-      method: string,
-      value: AztecWalletMethodMap['aztec_registerAccount']['result'],
-    ): JSONRPCSerializedData => {
+    serialize: (method: string, value: CompleteAddress): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(completeAddressSerializer.serialize(value)),
+        serialized: JSON.stringify(value.toString()),
       };
     },
     /**
@@ -156,11 +143,8 @@ export class AztecRegisterAccountSerializer
      * @param data - The serialized complete address
      * @returns Deserialized complete address
      */
-    deserialize: (
-      method: string,
-      data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_registerAccount']['result'] => {
-      return completeAddressSerializer.deserialize(decodeBase64(data.serialized));
+    deserialize: (method: string, data: JSONRPCSerializedData): CompleteAddress => {
+      return CompleteAddress.fromString(JSON.parse(data.serialized));
     },
   };
 }
@@ -168,7 +152,6 @@ export class AztecRegisterAccountSerializer
 /**
  * Serializer for the aztec_addAuthWitness RPC method.
  * Handles serialization of authentication witness data between JSON-RPC format and native Aztec types.
- * Auth witnesses are used to prove transaction authorization.
  */
 export class AztecAddAuthWitnessSerializer
   implements
@@ -191,7 +174,7 @@ export class AztecAddAuthWitnessSerializer
       const { authWitness } = value;
       return {
         method,
-        serialized: encodeBase64(authWitnessSerializer.serialize(authWitness)),
+        serialized: JSON.stringify(authWitness.toString()),
       };
     },
     /**
@@ -204,7 +187,7 @@ export class AztecAddAuthWitnessSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_addAuthWitness']['params'] => {
-      const authWitness = authWitnessSerializer.deserialize(decodeBase64(data.serialized));
+      const authWitness = AuthWitness.fromString(JSON.parse(data.serialized));
       return { authWitness };
     },
   };
@@ -219,7 +202,7 @@ export class AztecAddAuthWitnessSerializer
     serialize: (method: string, value: boolean): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     /**
@@ -229,7 +212,7 @@ export class AztecAddAuthWitnessSerializer
      * @returns Boolean indicating success
      */
     deserialize: (method: string, data: JSONRPCSerializedData): boolean => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
@@ -237,7 +220,6 @@ export class AztecAddAuthWitnessSerializer
 /**
  * Serializer for the aztec_getAuthWitness RPC method.
  * Handles serialization of authentication witness retrieval between JSON-RPC format and native Aztec types.
- * Retrieves auth witnesses associated with a specific message hash.
  */
 export class AztecGetAuthWitnessSerializer
   implements
@@ -260,7 +242,7 @@ export class AztecGetAuthWitnessSerializer
       const { messageHash } = value;
       return {
         method,
-        serialized: encodeBase64(frSerializer.serialize(messageHash)),
+        serialized: JSON.stringify(messageHash.toString()),
       };
     },
     /**
@@ -273,7 +255,7 @@ export class AztecGetAuthWitnessSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_getAuthWitness']['params'] => {
-      const messageHash = frSerializer.deserialize(decodeBase64(data.serialized));
+      const messageHash = Fr.fromString(JSON.parse(data.serialized));
       return { messageHash };
     },
   };
@@ -291,7 +273,7 @@ export class AztecGetAuthWitnessSerializer
     ): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value.map((w) => frSerializer.serialize(w)))),
+        serialized: JSON.stringify(value.map((w) => w.toString())),
       };
     },
     /**
@@ -304,7 +286,7 @@ export class AztecGetAuthWitnessSerializer
       method: string,
       data: JSONRPCSerializedData,
     ): AztecWalletMethodMap['aztec_getAuthWitness']['result'] => {
-      return JSON.parse(decodeBase64(data.serialized)).map((w: string) => frSerializer.deserialize(w));
+      return JSON.parse(data.serialized).map((w: string) => Fr.fromString(w));
     },
   };
 }

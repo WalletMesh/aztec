@@ -30,24 +30,24 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          if (id.includes("bb-prover")) {
-            return "@aztec/bb-prover";
+          if (id.includes('bb-prover')) {
+            return '@aztec/bb-prover';
           }
         },
       },
     },
   },
   optimizeDeps: {
-    exclude: ["@noir-lang/acvm_js", "@noir-lang/noirc_abi", "@aztec/bb-prover"],
+    exclude: ['@noir-lang/acvm_js', '@noir-lang/noirc_abi', '@aztec/bb-prover'],
     esbuildOptions: {
       supported: {
-        "top-level-await": true,
-      }
-    }
+        'top-level-await': true,
+      },
+    },
   },
   esbuild: {
     supported: {
-      "top-level-await": true,
+      'top-level-await': true,
     },
-  }
+  },
 });

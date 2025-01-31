@@ -25,15 +25,16 @@ import type { ExecutionRequestInit } from '@aztec/aztec.js/entrypoint';
 import type { AbiDecoded } from '@aztec/foundation/abi';
 import type {
   InBlock,
-  IncomingNotesFilter,
+  NotesFilter,
   EventMetadataDefinition,
   PrivateExecutionResult,
   TxEffect,
   TxProvingResult,
   UniqueNote,
-  GetUnencryptedLogsResponse,
   PXEInfo,
   TxSimulationResult,
+  GetPublicLogsResponse,
+  GetContractClassLogsResponse,
 } from '@aztec/circuit-types';
 import type { GasFees, L1_TO_L2_MSG_TREE_HEIGHT } from '@aztec/circuits.js';
 import type { JSONRPCEventMap, JSONRPCMiddleware } from '@walletmesh/jsonrpc';
@@ -265,18 +266,18 @@ export interface AztecWalletMethodMap extends AztecWalletBaseMethodMap {
   };
 
   /* Notes */
-  aztec_getIncomingNotes: { params: { filter: IncomingNotesFilter }; result: UniqueNote[] };
+  aztec_getNotes: { params: { filter: NotesFilter }; result: UniqueNote[] };
   aztec_addNote: { params: { note: ExtendedNote }; result: boolean };
   aztec_addNullifiedNote: { params: { note: ExtendedNote }; result: boolean };
 
-  /* Logs */
-  aztec_getUnencryptedLogs: { params: { filter: LogFilter }; result: GetUnencryptedLogsResponse };
-  aztec_getContractClassLogs: { params: { filter: LogFilter }; result: GetUnencryptedLogsResponse };
-  aztec_getEncryptedEvents: {
+  /* Logs and Events */
+  aztec_getPublicLogs: { params: { filter: LogFilter }; result: GetPublicLogsResponse };
+  aztec_getContractClassLogs: { params: { filter: LogFilter }; result: GetContractClassLogsResponse };
+  aztec_getPrivateEvents: {
     params: { event: EventMetadataDefinition; from: number; limit: number; vpks?: Point[] };
     result: unknown[];
   };
-  aztec_getUnencryptedEvents: {
+  aztec_getPublicEvents: {
     params: { event: EventMetadataDefinition; from: number; limit: number };
     result: unknown[];
   };

@@ -1,160 +1,192 @@
 import type { AztecWalletMethodMap } from '../types.js';
-import type { JSONRPCSerializedData, JSONRPCSerializer } from './types.js';
-import { encodeBase64, decodeBase64 } from './types.js';
+import type { JSONRPCSerializedData, JSONRPCSerializer } from '@walletmesh/jsonrpc';
 import type { EventMetadataDefinition } from '@aztec/circuit-types';
-import { ExtendedUnencryptedL2Log, TxHash, LogId } from '@aztec/circuit-types';
+import {
+  ExtendedPublicLog,
+  LogFilterSchema,
+  GetPublicLogsResponseSchema,
+  GetContractClassLogsResponseSchema,
+  TxHash,
+  LogId,
+} from '@aztec/circuit-types';
 import { Point, AztecAddress } from '@aztec/aztec.js';
-import { EventSelector, AbiTypeSchema } from '@aztec/foundation/abi';
-import type { LogFilter } from '@aztec/aztec.js';
+import { EventSelector } from '@aztec/foundation/abi';
 
 /**
- * Serializer for the aztec_getUnencryptedLogs RPC method.
- * Handles serialization of unencrypted log queries and results between JSON-RPC format and native Aztec types.
- * Supports filtering logs by transaction hash, block range, and contract address.
+ * Serializer for the aztec_getPublicLogs RPC method.
+ * Handles serialization of public log queries and results between JSON-RPC format and native Aztec types.
  */
-export class AztecGetUnencryptedLogsSerializer
+export class AztecGetPublicLogsSerializer
   implements
     JSONRPCSerializer<
-      AztecWalletMethodMap['aztec_getUnencryptedLogs']['params'],
-      AztecWalletMethodMap['aztec_getUnencryptedLogs']['result']
+      AztecWalletMethodMap['aztec_getPublicLogs']['params'],
+      AztecWalletMethodMap['aztec_getPublicLogs']['result']
     >
 {
   params = {
-    /**
-     * Serializes log filter parameters for RPC transport.
-     * @param method - The RPC method name
-     * @param value - The filter parameters including txHash, block range, and contract address
-     * @returns Serialized filter data
-     */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getUnencryptedLogs']['params'],
+      value: AztecWalletMethodMap['aztec_getPublicLogs']['params'],
     ): JSONRPCSerializedData => {
       const { filter } = value;
+      // Convert all fields that need string conversion
+      const serializedFilter = {
+        ...filter,
+        txHash: filter.txHash?.toString(),
+        contractAddress: filter.contractAddress?.toString(),
+        afterLog: filter.afterLog?.toString(),
+        fromBlock: filter.fromBlock,
+        toBlock: filter.toBlock,
+      };
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify({
-            txHash: filter.txHash?.toString(),
-            fromBlock: filter.fromBlock,
-            toBlock: filter.toBlock,
-            afterLog: filter.afterLog?.toString(),
-            contractAddress: filter.contractAddress?.toString(),
-          }),
-        ),
+        serialized: JSON.stringify({ filter: serializedFilter }),
       };
     },
-    /**
-     * Deserializes log filter parameters from RPC transport.
-     * @param method - The RPC method name
-     * @param data - The serialized filter data
-     * @returns Deserialized filter parameters
-     */
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getUnencryptedLogs']['params'] => {
-      const parsed = JSON.parse(decodeBase64(data.serialized));
-      const filter: LogFilter = {
-        txHash: parsed.txHash ? TxHash.fromString(parsed.txHash) : undefined,
-        fromBlock: parsed.fromBlock,
-        toBlock: parsed.toBlock,
-        afterLog: parsed.afterLog ? LogId.fromString(parsed.afterLog) : undefined,
-        contractAddress: parsed.contractAddress ? AztecAddress.fromString(parsed.contractAddress) : undefined,
+    ): AztecWalletMethodMap['aztec_getPublicLogs']['params'] => {
+      const { filter } = JSON.parse(data.serialized);
+      return {
+        filter: {
+          txHash: filter.txHash ? TxHash.fromString(filter.txHash) : undefined,
+          contractAddress: filter.contractAddress
+            ? AztecAddress.fromString(filter.contractAddress)
+            : undefined,
+          afterLog: filter.afterLog ? LogId.fromString(filter.afterLog) : undefined,
+          fromBlock: filter.fromBlock,
+          toBlock: filter.toBlock,
+        },
       };
-      return { filter };
     },
   };
 
   result = {
-    /**
-     * Serializes unencrypted log results for RPC transport.
-     * @param method - The RPC method name
-     * @param value - The log results including logs array and maxLogsHit flag
-     * @returns Serialized log data
-     */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getUnencryptedLogs']['result'],
+      value: AztecWalletMethodMap['aztec_getPublicLogs']['result'],
     ): JSONRPCSerializedData => {
-      const serializedLogs = value.logs.map((log) => log.toString());
       return {
         method,
-        serialized: encodeBase64(JSON.stringify({ serializedLogs, maxLogsHit: value.maxLogsHit })),
+        serialized: JSON.stringify(value),
       };
     },
-    /**
-     * Deserializes unencrypted log results from RPC transport.
-     * @param method - The RPC method name
-     * @param data - The serialized log data
-     * @returns Deserialized log results
-     */
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getUnencryptedLogs']['result'] => {
-      const { serializedLogs, maxLogsHit } = JSON.parse(decodeBase64(data.serialized));
-      return {
-        logs: serializedLogs.map((log: string) => ExtendedUnencryptedL2Log.fromString(log)),
-        maxLogsHit,
-      };
+    ): AztecWalletMethodMap['aztec_getPublicLogs']['result'] => {
+      return GetPublicLogsResponseSchema.parse(JSON.parse(data.serialized));
     },
   };
 }
 
 /**
- * Serializer for the aztec_getEncryptedEvents RPC method.
- * Handles serialization of encrypted event queries and results between JSON-RPC format and native Aztec types.
- * Supports querying events with viewing keys for decryption.
+ * Serializer for the aztec_getContractClassLogs RPC method.
+ * Handles serialization of contract class log queries and results between JSON-RPC format and native Aztec types.
  */
-export class AztecGetEncryptedEventsSerializer
+export class AztecGetContractClassLogsSerializer
   implements
     JSONRPCSerializer<
-      AztecWalletMethodMap['aztec_getEncryptedEvents']['params'],
-      AztecWalletMethodMap['aztec_getEncryptedEvents']['result']
+      AztecWalletMethodMap['aztec_getContractClassLogs']['params'],
+      AztecWalletMethodMap['aztec_getContractClassLogs']['result']
     >
 {
   params = {
-    /**
-     * Serializes encrypted event query parameters for RPC transport.
-     * @param method - The RPC method name
-     * @param value - The query parameters including event metadata, range, and viewing keys
-     * @returns Serialized query data
-     */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getEncryptedEvents']['params'],
+      value: AztecWalletMethodMap['aztec_getContractClassLogs']['params'],
+    ): JSONRPCSerializedData => {
+      const { filter } = value;
+      // Convert fields to strings for schema validation
+      const serializedFilter = {
+        txHash: filter.txHash?.toString() ?? undefined,
+        contractAddress: filter.contractAddress?.toString() ?? undefined,
+        afterLog: filter.afterLog?.toString() ?? undefined,
+        fromBlock: filter.fromBlock,
+        toBlock: filter.toBlock,
+      };
+      return {
+        method,
+        serialized: JSON.stringify({ filter: serializedFilter }),
+      };
+    },
+    deserialize: (
+      method: string,
+      data: JSONRPCSerializedData,
+    ): AztecWalletMethodMap['aztec_getContractClassLogs']['params'] => {
+      const { filter } = JSON.parse(data.serialized);
+      return {
+        filter: {
+          txHash: filter.txHash ? TxHash.fromString(filter.txHash) : undefined,
+          contractAddress: filter.contractAddress
+            ? AztecAddress.fromString(filter.contractAddress)
+            : undefined,
+          afterLog: filter.afterLog ? LogId.fromString(filter.afterLog) : undefined,
+          fromBlock: filter.fromBlock,
+          toBlock: filter.toBlock,
+        },
+      };
+    },
+  };
+
+  result = {
+    serialize: (
+      method: string,
+      value: AztecWalletMethodMap['aztec_getContractClassLogs']['result'],
+    ): JSONRPCSerializedData => {
+      return {
+        method,
+        serialized: JSON.stringify(GetContractClassLogsResponseSchema.parse(value)),
+      };
+    },
+    deserialize: (
+      method: string,
+      data: JSONRPCSerializedData,
+    ): AztecWalletMethodMap['aztec_getContractClassLogs']['result'] => {
+      return GetContractClassLogsResponseSchema.parse(JSON.parse(data.serialized));
+    },
+  };
+}
+
+/**
+ * Serializer for the aztec_getPrivateEvents RPC method.
+ * Handles serialization of private event queries and results between JSON-RPC format and native Aztec types.
+ */
+export class AztecGetPrivateEventsSerializer
+  implements
+    JSONRPCSerializer<
+      AztecWalletMethodMap['aztec_getPrivateEvents']['params'],
+      AztecWalletMethodMap['aztec_getPrivateEvents']['result']
+    >
+{
+  params = {
+    serialize: (
+      method: string,
+      value: AztecWalletMethodMap['aztec_getPrivateEvents']['params'],
     ): JSONRPCSerializedData => {
       const { event, from, limit, vpks } = value;
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify({
-            event: {
-              eventSelector: event.eventSelector.toString(),
-              abiType: {
-                kind: event.abiType.kind,
-              },
-              fieldNames: event.fieldNames,
+        serialized: JSON.stringify({
+          event: {
+            eventSelector: event.eventSelector.toString(),
+            abiType: {
+              kind: event.abiType.kind,
             },
-            from,
-            limit,
-            vpks: vpks?.map((p) => p.toString()),
-          }),
-        ),
+            fieldNames: event.fieldNames,
+          },
+          from,
+          limit,
+          vpks: vpks?.map((p) => p.toString()),
+        }),
       };
     },
-    /**
-     * Deserializes encrypted event query parameters from RPC transport.
-     * @param method - The RPC method name
-     * @param data - The serialized query data
-     * @returns Deserialized query parameters
-     */
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getEncryptedEvents']['params'] => {
-      const { event: serializedEvent, from, limit, vpks } = JSON.parse(decodeBase64(data.serialized));
+    ): AztecWalletMethodMap['aztec_getPrivateEvents']['params'] => {
+      const { event: serializedEvent, from, limit, vpks } = JSON.parse(data.serialized);
       const event: EventMetadataDefinition = {
         eventSelector: EventSelector.fromString(serializedEvent.eventSelector),
         abiType: {
@@ -171,76 +203,56 @@ export class AztecGetEncryptedEventsSerializer
     },
   };
 
-  /**
-   * Handles serialization of encrypted event results.
-   * Note: The result type is generic (T[]) based on the event's ABI type definition.
-   * Currently handles results as unknown[] until proper ABI-based deserialization is implemented.
-   */
   result = {
     serialize: (method: string, value: unknown[]): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): unknown[] => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
 
 /**
- * Serializer for the aztec_getUnencryptedEvents RPC method.
- * Handles serialization of unencrypted event queries and results between JSON-RPC format and native Aztec types.
- * Supports querying events by event selector and pagination parameters.
+ * Serializer for the aztec_getPublicEvents RPC method.
+ * Handles serialization of public event queries and results between JSON-RPC format and native Aztec types.
  */
-export class AztecGetUnencryptedEventsSerializer
+export class AztecGetPublicEventsSerializer
   implements
     JSONRPCSerializer<
-      AztecWalletMethodMap['aztec_getUnencryptedEvents']['params'],
-      AztecWalletMethodMap['aztec_getUnencryptedEvents']['result']
+      AztecWalletMethodMap['aztec_getPublicEvents']['params'],
+      AztecWalletMethodMap['aztec_getPublicEvents']['result']
     >
 {
   params = {
-    /**
-     * Serializes unencrypted event query parameters for RPC transport.
-     * @param method - The RPC method name
-     * @param value - The query parameters including event metadata and range
-     * @returns Serialized query data
-     */
     serialize: (
       method: string,
-      value: AztecWalletMethodMap['aztec_getUnencryptedEvents']['params'],
+      value: AztecWalletMethodMap['aztec_getPublicEvents']['params'],
     ): JSONRPCSerializedData => {
       const { event, from, limit } = value;
       return {
         method,
-        serialized: encodeBase64(
-          JSON.stringify({
-            event: {
-              eventSelector: event.eventSelector.toString(),
-              abiType: {
-                kind: event.abiType.kind,
-              },
-              fieldNames: event.fieldNames,
+        serialized: JSON.stringify({
+          event: {
+            eventSelector: event.eventSelector.toString(),
+            abiType: {
+              kind: event.abiType.kind,
             },
-            from,
-            limit,
-          }),
-        ),
+            fieldNames: event.fieldNames,
+          },
+          from,
+          limit,
+        }),
       };
     },
-    /**
-     * Deserializes unencrypted event query parameters from RPC transport.
-     * @param method - The RPC method name
-     * @param data - The serialized query data
-     * @returns Deserialized query parameters
-     */
     deserialize: (
       method: string,
       data: JSONRPCSerializedData,
-    ): AztecWalletMethodMap['aztec_getUnencryptedEvents']['params'] => {
-      const { event: serializedEvent, from, limit } = JSON.parse(decodeBase64(data.serialized));
+    ): AztecWalletMethodMap['aztec_getPublicEvents']['params'] => {
+      const { event: serializedEvent, from, limit } = JSON.parse(data.serialized);
       const event: EventMetadataDefinition = {
         eventSelector: EventSelector.fromString(serializedEvent.eventSelector),
         abiType: {
@@ -256,28 +268,23 @@ export class AztecGetUnencryptedEventsSerializer
     },
   };
 
-  /**
-   * Handles serialization of unencrypted event results.
-   * Note: The result type is generic (T[]) based on the event's ABI type definition.
-   * Currently handles results as unknown[] until proper ABI-based deserialization is implemented.
-   */
   result = {
     serialize: (method: string, value: unknown[]): JSONRPCSerializedData => {
       return {
         method,
-        serialized: encodeBase64(JSON.stringify(value)),
+        serialized: JSON.stringify(value),
       };
     },
     deserialize: (method: string, data: JSONRPCSerializedData): unknown[] => {
-      return JSON.parse(decodeBase64(data.serialized));
+      return JSON.parse(data.serialized);
     },
   };
 }
 
 /**
  * Pre-instantiated serializer instances for each Aztec log/event-related RPC method.
- * These instances can be used directly by the RPC handler implementation.
  */
-export const aztecGetUnencryptedLogsSerializer = new AztecGetUnencryptedLogsSerializer();
-export const aztecGetEncryptedEventsSerializer = new AztecGetEncryptedEventsSerializer();
-export const aztecGetUnencryptedEventsSerializer = new AztecGetUnencryptedEventsSerializer();
+export const aztecGetPublicLogsSerializer = new AztecGetPublicLogsSerializer();
+export const aztecGetContractClassLogsSerializer = new AztecGetContractClassLogsSerializer();
+export const aztecGetPrivateEventsSerializer = new AztecGetPrivateEventsSerializer();
+export const aztecGetPublicEventsSerializer = new AztecGetPublicEventsSerializer();

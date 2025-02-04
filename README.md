@@ -1,17 +1,3 @@
-## WalletMesh Aztec Library
+# ARCHIVED
 
-[@walletmesh/aztec](https://github.com/WalletMesh/aztec/tree/main) provides tools for interacting
-with the [Aztec](https://aztec.network) blockchain.
-
-## Installation
-
-```bash
-npm install @walletmesh/aztec
-```
-
-## Usage
-
-See the documentation for the Wallet & Provider RPC library at
-[packages/aztec-rpc-wallet/README.md](https://github.com/WalletMesh/aztec/tree/main/packages/aztec-rpc-wallet#readme)
-and an example dApp & Wallet implementation at
-[packages/example](https://github.com/WalletMesh/aztec/tree/main/packages/example#readme).
+This has been moved to the walletmesh-packages monorepo: https://github.com/WalletMesh/walletmesh-packages/tree/main/aztec
